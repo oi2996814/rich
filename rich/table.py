@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field, replace
 from typing import (
-    Dict,
     TYPE_CHECKING,
+    Dict,
     Iterable,
     List,
     NamedTuple,
@@ -15,6 +15,7 @@ from . import box, errors
 from ._loop import loop_first_last, loop_last
 from ._pick import pick_bool
 from ._ratio import ratio_distribute, ratio_reduce
+from .align import VerticalAlignMethod
 from .jupyter import JupyterMixin
 from .measure import Measurement
 from .padding import Padding, PaddingDimensions
@@ -36,7 +37,35 @@ if TYPE_CHECKING:
 
 @dataclass
 class Column:
-    """Defines a column in a table."""
+    """Defines a column within a ~Table.
+
+    Args:
+        title (Union[str, Text], optional): The title of the table rendered at the top. Defaults to None.
+        caption (Union[str, Text], optional): The table caption rendered below. Defaults to None.
+        width (int, optional): The width in characters of the table, or ``None`` to automatically fit. Defaults to None.
+        min_width (Optional[int], optional): The minimum width of the table, or ``None`` for no minimum. Defaults to None.
+        box (box.Box, optional): One of the constants in box.py used to draw the edges (see :ref:`appendix_box`), or ``None`` for no box lines. Defaults to box.HEAVY_HEAD.
+        safe_box (Optional[bool], optional): Disable box characters that don't display on windows legacy terminal with *raster* fonts. Defaults to True.
+        padding (PaddingDimensions, optional): Padding for cells (top, right, bottom, left). Defaults to (0, 1).
+        collapse_padding (bool, optional): Enable collapsing of padding around cells. Defaults to False.
+        pad_edge (bool, optional): Enable padding of edge cells. Defaults to True.
+        expand (bool, optional): Expand the table to fit the available space if ``True``, otherwise the table width will be auto-calculated. Defaults to False.
+        show_header (bool, optional): Show a header row. Defaults to True.
+        show_footer (bool, optional): Show a footer row. Defaults to False.
+        show_edge (bool, optional): Draw a box around the outside of the table. Defaults to True.
+        show_lines (bool, optional): Draw lines between every row. Defaults to False.
+        leading (int, optional): Number of blank lines between rows (precludes ``show_lines``). Defaults to 0.
+        style (Union[str, Style], optional): Default style for the table. Defaults to "none".
+        row_styles (List[Union, str], optional): Optional list of row styles, if more than one style is given then the styles will alternate. Defaults to None.
+        header_style (Union[str, Style], optional): Style of the header. Defaults to "table.header".
+        footer_style (Union[str, Style], optional): Style of the footer. Defaults to "table.footer".
+        border_style (Union[str, Style], optional): Style of the border. Defaults to None.
+        title_style (Union[str, Style], optional): Style of the title. Defaults to None.
+        caption_style (Union[str, Style], optional): Style of the caption. Defaults to None.
+        title_justify (str, optional): Justify method for title. Defaults to "center".
+        caption_justify (str, optional): Justify method for caption. Defaults to "center".
+        highlight (bool, optional): Highlight cell contents (if str). Defaults to False.
+    """
 
     header: "RenderableType" = ""
     """RenderableType: Renderable for the header (typically a string)"""
@@ -56,6 +85,9 @@ class Column:
     justify: "JustifyMethod" = "left"
     """str: How to justify text within the column ("left", "center", "right", or "full")"""
 
+    vertical: "VerticalAlignMethod" = "top"
+    """str: How to vertically align content ("top", "middle", or "bottom")"""
+
     overflow: "OverflowMethod" = "ellipsis"
     """str: Overflow method."""
 
@@ -73,6 +105,9 @@ class Column:
 
     no_wrap: bool = False
     """bool: Prevent wrapping of text within the column. Defaults to ``False``."""
+
+    highlight: bool = False
+    """bool: Apply highlighter to column. Defaults to ``False``."""
 
     _index: int = 0
     """Index of column."""
@@ -112,6 +147,8 @@ class _Cell(NamedTuple):
     """Style to apply to cell."""
     renderable: "RenderableType"
     """Cell renderable."""
+    vertical: VerticalAlignMethod
+    """Cell vertical alignment."""
 
 
 class Table(JupyterMixin):
@@ -133,7 +170,7 @@ class Table(JupyterMixin):
         show_footer (bool, optional): Show a footer row. Defaults to False.
         show_edge (bool, optional): Draw a box around the outside of the table. Defaults to True.
         show_lines (bool, optional): Draw lines between every row. Defaults to False.
-        leading (bool, optional): Number of blank lines between rows (precludes ``show_lines``). Defaults to 0.
+        leading (int, optional): Number of blank lines between rows (precludes ``show_lines``). Defaults to 0.
         style (Union[str, Style], optional): Default style for the table. Defaults to "none".
         row_styles (List[Union, str], optional): Optional list of row styles, if more than one style is given then the styles will alternate. Defaults to None.
         header_style (Union[str, Style], optional): Style of the header. Defaults to "table.header".
@@ -178,7 +215,6 @@ class Table(JupyterMixin):
         caption_justify: "JustifyMethod" = "center",
         highlight: bool = False,
     ) -> None:
-
         self.columns: List[Column] = []
         self.rows: List[Row] = []
         self.title = title
@@ -332,9 +368,11 @@ class Table(JupyterMixin):
         footer: "RenderableType" = "",
         *,
         header_style: Optional[StyleType] = None,
+        highlight: Optional[bool] = None,
         footer_style: Optional[StyleType] = None,
         style: Optional[StyleType] = None,
         justify: "JustifyMethod" = "left",
+        vertical: "VerticalAlignMethod" = "top",
         overflow: "OverflowMethod" = "ellipsis",
         width: Optional[int] = None,
         min_width: Optional[int] = None,
@@ -350,9 +388,11 @@ class Table(JupyterMixin):
             footer (RenderableType, optional): Text or renderable for the footer.
                 Defaults to "".
             header_style (Union[str, Style], optional): Style for the header, or None for default. Defaults to None.
+            highlight (bool, optional): Whether to highlight the text. The default of None uses the value of the table (self) object.
             footer_style (Union[str, Style], optional): Style for the footer, or None for default. Defaults to None.
             style (Union[str, Style], optional): Style for the column cells, or None for default. Defaults to None.
             justify (JustifyMethod, optional): Alignment for cells. Defaults to "left".
+            vertical (VerticalAlignMethod, optional): Vertical alignment, one of "top", "middle", or "bottom". Defaults to "top".
             overflow (OverflowMethod): Overflow method: "crop", "fold", "ellipsis". Defaults to "ellipsis".
             width (int, optional): Desired width of column in characters, or None to fit to contents. Defaults to None.
             min_width (Optional[int], optional): Minimum width of column, or ``None`` for no minimum. Defaults to None.
@@ -366,9 +406,11 @@ class Table(JupyterMixin):
             header=header,
             footer=footer,
             header_style=header_style or "",
+            highlight=highlight if highlight is not None else self.highlight,
             footer_style=footer_style or "",
             style=style or "",
             justify=justify,
+            vertical=vertical,
             overflow=overflow,
             width=width,
             min_width=min_width,
@@ -409,7 +451,7 @@ class Table(JupyterMixin):
             ]
         for index, renderable in enumerate(cell_renderables):
             if index == len(columns):
-                column = Column(_index=index)
+                column = Column(_index=index, highlight=self.highlight)
                 for _ in self.rows:
                     add_cell(column, Text(""))
                 self.columns.append(column)
@@ -425,10 +467,15 @@ class Table(JupyterMixin):
                 )
         self.rows.append(Row(style=style, end_section=end_section))
 
+    def add_section(self) -> None:
+        """Add a new section (draw a line after current row)."""
+
+        if self.rows:
+            self.rows[-1].end_section = True
+
     def __rich_console__(
         self, console: "Console", options: "ConsoleOptions"
     ) -> "RenderResult":
-
         if not self.columns:
             yield Segment("\n")
             return
@@ -636,10 +683,18 @@ class Table(JupyterMixin):
         if any_padding:
             _Padding = Padding
             for first, last, (style, renderable) in loop_first_last(raw_cells):
-                yield _Cell(style, _Padding(renderable, get_padding(first, last)))
+                yield _Cell(
+                    style,
+                    _Padding(renderable, get_padding(first, last)),
+                    getattr(renderable, "vertical", None) or column.vertical,
+                )
         else:
-            for (style, renderable) in raw_cells:
-                yield _Cell(style, renderable)
+            for style, renderable in raw_cells:
+                yield _Cell(
+                    style,
+                    renderable,
+                    getattr(renderable, "vertical", None) or column.vertical,
+                )
 
     def _get_padding_width(self, column_index: int) -> int:
         """Get extra width from padding."""
@@ -707,8 +762,8 @@ class Table(JupyterMixin):
             if self.box
             else None
         )
+        _box = _box.get_plain_headed_box() if _box and not self.show_header else _box
 
-        # _box = self.box
         new_line = Segment.line()
 
         columns = self.columns
@@ -727,14 +782,14 @@ class Table(JupyterMixin):
                     _Segment(_box.head_vertical, border_style),
                 ),
                 (
-                    _Segment(_box.foot_left, border_style),
-                    _Segment(_box.foot_right, border_style),
-                    _Segment(_box.foot_vertical, border_style),
-                ),
-                (
                     _Segment(_box.mid_left, border_style),
                     _Segment(_box.mid_right, border_style),
                     _Segment(_box.mid_vertical, border_style),
+                ),
+                (
+                    _Segment(_box.foot_left, border_style),
+                    _Segment(_box.foot_right, border_style),
+                    _Segment(_box.foot_vertical, border_style),
                 ),
             ]
             if show_edge:
@@ -769,19 +824,47 @@ class Table(JupyterMixin):
                     no_wrap=column.no_wrap,
                     overflow=column.overflow,
                     height=None,
+                    highlight=column.highlight,
                 )
-                cell_style = table_style + row_style + get_style(cell.style)
                 lines = console.render_lines(
-                    cell.renderable, render_options, style=cell_style
+                    cell.renderable,
+                    render_options,
+                    style=get_style(cell.style) + row_style,
                 )
                 max_height = max(max_height, len(lines))
                 cells.append(lines)
 
+            row_height = max(len(cell) for cell in cells)
+
+            def align_cell(
+                cell: List[List[Segment]],
+                vertical: "VerticalAlignMethod",
+                width: int,
+                style: Style,
+            ) -> List[List[Segment]]:
+                if header_row:
+                    vertical = "bottom"
+                elif footer_row:
+                    vertical = "top"
+
+                if vertical == "top":
+                    return _Segment.align_top(cell, width, row_height, style)
+                elif vertical == "middle":
+                    return _Segment.align_middle(cell, width, row_height, style)
+                return _Segment.align_bottom(cell, width, row_height, style)
+
             cells[:] = [
                 _Segment.set_shape(
-                    _cell, width, max_height, style=table_style + row_style
+                    align_cell(
+                        cell,
+                        _cell.vertical,
+                        width,
+                        get_style(_cell.style) + row_style,
+                    ),
+                    width,
+                    max_height,
                 )
-                for width, _cell in zip(widths, cells)
+                for width, _cell, cell, column in zip(widths, row_cell, cells, columns)
             ]
 
             if _box:

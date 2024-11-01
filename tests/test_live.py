@@ -1,12 +1,11 @@
 # encoding=utf-8
-import io
 import time
 from typing import Optional
 
 # import pytest
 from rich.console import Console
-from rich.text import Text
 from rich.live import Live
+from rich.text import Text
 
 
 def create_capture_console(
@@ -23,7 +22,6 @@ def create_capture_console(
 
 
 def test_live_state() -> None:
-
     with Live("") as live:
         assert live._started
         live.start()
@@ -117,8 +115,6 @@ def test_growing_display_overflow_visible() -> None:
 
 def test_growing_display_autorefresh() -> None:
     """Test generating a table but using auto-refresh from threading"""
-    console = create_capture_console()
-
     console = create_capture_console(height=5)
     console.begin_capture()
     with Live(console=console, auto_refresh=True, vertical_overflow="visible") as live:

@@ -10,7 +10,7 @@ To syntax highlight code, construct a :class:`~rich.syntax.Syntax` object and pr
 
     console = Console()
     with open("syntax.py", "rt") as code_file:
-        syntax = Syntax(code_file.read(), "python")     
+        syntax = Syntax(code_file.read(), "python")
     console.print(syntax)
 
 You may also use the :meth:`~rich.syntax.Syntax.from_path` alternative constructor which will load the code from disk and auto-detect the file type. The example above could be re-written as follows::
@@ -41,7 +41,7 @@ The Syntax constructor (and :meth:`~rich.syntax.Syntax.from_path`) accept a ``th
 Background color
 ----------------
 
-You can override the background color from the theme by supplying a ``background_color`` argument to the constructor. This should be a string in the same format a style definition accepts, .e.g "red", "#ff0000", "rgb(255,0,0)" etc. You may also set the special value "default" which will use the default background color set in the terminal.
+You can override the background color from the theme by supplying a ``background_color`` argument to the constructor. This should be a string in the same format a style definition accepts, e.g. "red", "#ff0000", "rgb(255,0,0)" etc. You may also set the special value "default" which will use the default background color set in the terminal.
 
 
 Syntax CLI

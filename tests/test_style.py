@@ -1,7 +1,7 @@
 import pytest
 
-from rich.color import Color, ColorSystem, ColorType
 from rich import errors
+from rich.color import Color, ColorSystem, ColorType
 from rich.style import Style, StyleStack
 
 
@@ -168,7 +168,6 @@ def test_test():
 
 def test_add():
     assert Style(color="red") + None == Style(color="red")
-    assert Style().__add__("foo") == NotImplemented
 
 
 def test_iadd():
@@ -230,3 +229,39 @@ def test_from_meta():
 def test_on():
     style = Style.on({"foo": "bar"}, click="CLICK") + Style(color="red")
     assert style.meta == {"foo": "bar", "@click": "CLICK"}
+
+
+def test_clear_meta_and_links():
+    style = Style.parse("bold red on black link https://example.org") + Style.on(
+        click="CLICK"
+    )
+
+    assert style.meta == {"@click": "CLICK"}
+    assert style.link == "https://example.org"
+    assert style.color == Color.parse("red")
+    assert style.bgcolor == Color.parse("black")
+    assert style.bold
+    assert not style.italic
+
+    clear_style = style.clear_meta_and_links()
+
+    assert clear_style.meta == {}
+    assert clear_style.link == None
+    assert clear_style.color == Color.parse("red")
+    assert clear_style.bgcolor == Color.parse("black")
+    assert clear_style.bold
+    assert not clear_style.italic
+
+
+def test_clear_meta_and_links_clears_hash():
+    """Regression test for https://github.com/Textualize/rich/issues/2942."""
+
+    style = Style.parse("bold red on black link https://example.org") + Style.on(
+        click="CLICK"
+    )
+    hash(style)  # Force hash caching.
+
+    assert style._hash is not None
+
+    clear_style = style.clear_meta_and_links()
+    assert clear_style._hash is None

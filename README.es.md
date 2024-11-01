@@ -1,29 +1,34 @@
 [![Downloads](https://pepy.tech/badge/rich/month)](https://pepy.tech/project/rich)
 [![PyPI version](https://badge.fury.io/py/rich.svg)](https://badge.fury.io/py/rich)
-[![codecov](https://codecov.io/gh/willmcgugan/rich/branch/master/graph/badge.svg)](https://codecov.io/gh/willmcgugan/rich)
+[![codecov](https://codecov.io/gh/Textualize/rich/branch/master/graph/badge.svg)](https://codecov.io/gh/Textualize/rich)
 [![Rich blog](https://img.shields.io/badge/blog-rich%20news-yellowgreen)](https://www.willmcgugan.com/tag/rich/)
 [![Twitter Follow](https://img.shields.io/twitter/follow/willmcgugan.svg?style=social)](https://twitter.com/willmcgugan)
 
-![Logo](https://github.com/willmcgugan/rich/raw/master/imgs/logo.svg)
+![Logo](https://github.com/textualize/rich/raw/master/imgs/logo.svg)
 
-[English readme](https://github.com/willmcgugan/rich/blob/master/README.md)
- • [中文 readme](https://github.com/willmcgugan/rich/blob/master/README.cn.md)
- • [Lengua española readme](https://github.com/willmcgugan/rich/blob/master/README.es.md)
- • [Deutsche readme](https://github.com/willmcgugan/rich/blob/master/README.de.md)
- • [Läs på svenska](https://github.com/willmcgugan/rich/blob/master/README.sv.md)
- • [日本語 readme](https://github.com/willmcgugan/rich/blob/master/README.ja.md)
- • [한국어 readme](https://github.com/willmcgugan/rich/blob/master/README.kr.md)
- • [Français readme](https://github.com/willmcgugan/rich/blob/master/README.fr.md)
- • [Schwizerdütsch readme](https://github.com/willmcgugan/rich/blob/master/README.de-ch.md)
- • [हिन्दी readme](https://github.com/willmcgugan/rich/blob/master/README.hi.md)
- • [Português brasileiro readme](https://github.com/willmcgugan/rich/blob/master/README.pt-br.md)
- • [Italian readme](https://github.com/willmcgugan/rich/blob/master/README.it.md)
+[English readme](https://github.com/textualize/rich/blob/master/README.md)
+ • [简体中文 readme](https://github.com/textualize/rich/blob/master/README.cn.md)
+ • [正體中文 readme](https://github.com/textualize/rich/blob/master/README.zh-tw.md)
+ • [Lengua española readme](https://github.com/textualize/rich/blob/master/README.es.md)
+ • [Deutsche readme](https://github.com/textualize/rich/blob/master/README.de.md)
+ • [Läs på svenska](https://github.com/textualize/rich/blob/master/README.sv.md)
+ • [日本語 readme](https://github.com/textualize/rich/blob/master/README.ja.md)
+ • [한국어 readme](https://github.com/textualize/rich/blob/master/README.kr.md)
+ • [Français readme](https://github.com/textualize/rich/blob/master/README.fr.md)
+ • [Schwizerdütsch readme](https://github.com/textualize/rich/blob/master/README.de-ch.md)
+ • [हिन्दी readme](https://github.com/textualize/rich/blob/master/README.hi.md)
+ • [Português brasileiro readme](https://github.com/textualize/rich/blob/master/README.pt-br.md)
+ • [Italian readme](https://github.com/textualize/rich/blob/master/README.it.md)
+ • [Русский readme](https://github.com/textualize/rich/blob/master/README.ru.md)
+  • [فارسی readme](https://github.com/textualize/rich/blob/master/README.fa.md)
+ • [Türkçe readme](https://github.com/textualize/rich/blob/master/README.tr.md)
+ • [Polskie readme](https://github.com/textualize/rich/blob/master/README.pl.md)
 
 Rich es un paquete de Python para texto _enriquecido_ y un hermoso formato en la terminal.
 
 La [API Rich](https://rich.readthedocs.io/en/latest/) facilita la adición de color y estilo a la salida del terminal. Rich también puede representar tablas bonitas, barras de progreso, markdown, código fuente resaltado por sintaxis, trazas y más — listo para usar.
 
-![Funciones](https://github.com/willmcgugan/rich/raw/master/imgs/features.png)
+![Funciones](https://github.com/textualize/rich/raw/master/imgs/features.png)
 
 Para ver un vídeo de introducción a Rich, consulte [calmcode.io](https://calmcode.io/rich/introduction.html) de [@fishnets88](https://twitter.com/fishnets88).
 
@@ -31,7 +36,7 @@ Vea lo que [la gente dice sobre Rich](https://www.willmcgugan.com/blog/pages/pos
 
 ## Compatibilidad
 
-Rich funciona con Linux, OSX y Windows. True color / emoji funciona con la nueva Terminal de Windows, la terminal clásica está limitada a 8 colores. Rich requiere Python 3.6.1 o posterior.
+Rich funciona con Linux, OSX y Windows. True color / emoji funciona con la nueva Terminal de Windows, la terminal clásica está limitada a 8 colores. Rich requiere Python 3.6.3 o posterior.
 
 Rich funciona con [Jupyter notebooks](https://jupyter.org/) sin necesidad de configuración adicional.
 
@@ -39,13 +44,13 @@ Rich funciona con [Jupyter notebooks](https://jupyter.org/) sin necesidad de con
 
 Instale con `pip` o su administrador de paquetes PyPI favorito.
 
-```
-pip install rich
+```sh
+python -m pip install rich
 ```
 
 Ejecute lo siguiente para probar la salida de Rich sobre su terminal:
 
-```
+```sh
 python -m rich
 ```
 
@@ -59,7 +64,7 @@ from rich import print
 print("Hello, [bold magenta]World[/bold magenta]!", ":vampire:", locals())
 ```
 
-![Hello World](https://github.com/willmcgugan/rich/raw/master/imgs/print.png)
+![Hello World](https://github.com/textualize/rich/raw/master/imgs/print.png)
 
 ## Rich REPL
 
@@ -70,7 +75,7 @@ Rich se puede instalar en Python REPL, por lo que cualquier estructura de datos 
 >>> pretty.install()
 ```
 
-![REPL](https://github.com/willmcgugan/rich/raw/master/imgs/repl.png)
+![REPL](https://github.com/textualize/rich/raw/master/imgs/repl.png)
 
 ## Usando la consola
 
@@ -98,7 +103,7 @@ console.print("Hello", "World!", style="bold red")
 
 La salida será similar a la siguiente:
 
-![Hello World](https://github.com/willmcgugan/rich/raw/master/imgs/hello_world.png)
+![Hello World](https://github.com/textualize/rich/raw/master/imgs/hello_world.png)
 
 Eso está bien para diseñar una línea de texto a la vez. Para un estilo más fino, Rich presenta un marcado especial que es similar en sintaxis a [bbcode](https://en.wikipedia.org/wiki/BBCode). He aquí un ejemplo:
 
@@ -106,9 +111,9 @@ Eso está bien para diseñar una línea de texto a la vez. Para un estilo más f
 console.print("Where there is a [bold cyan]Will[/bold cyan] there [u]is[/u] a [i]way[/i].")
 ```
 
-![Console Markup](https://github.com/willmcgugan/rich/raw/master/imgs/where_there_is_a_will.png)
+![Console Markup](https://github.com/textualize/rich/raw/master/imgs/where_there_is_a_will.png)
 
-Usted puede usar el objeto Console para generar salida sofisticada con mínimo esfuerzo. Ver la [API Console](https://rich.readthedocs.io/en/latest/console.html) docs para detalles.
+Usted puede usar el objeto Console para generar salida sofisticada con mínimo esfuerzo. Ver la documentación [API Console](https://rich.readthedocs.io/en/latest/console.html) para detalles.
 
 ## Rich Inspector
 
@@ -120,9 +125,9 @@ Rich tiene ua función [inspeccionar](https://rich.readthedocs.io/en/latest/refe
 >>> inspect(my_list, methods=True)
 ```
 
-![Log](https://github.com/willmcgugan/rich/raw/master/imgs/inspect.png)
+![Log](https://github.com/textualize/rich/raw/master/imgs/inspect.png)
 
-Ver la [docs inspector](https://rich.readthedocs.io/en/latest/reference/init.html#rich.inspect) para detalles.
+Ver la [documentación inspector](https://rich.readthedocs.io/en/latest/reference/init.html#rich.inspect) para detalles.
 
 # Paquete Rich
 
@@ -160,7 +165,7 @@ test_log()
 
 Lo anterior produce el siguiente resultado:
 
-![Registro](https://github.com/willmcgugan/rich/raw/master/imgs/log.png)
+![Registro](https://github.com/textualize/rich/raw/master/imgs/log.png)
 
 Tenga en cuenta el argumento `log_locals`, que genera una tabla que contiene las variables locales donde se llamó al método log.
 
@@ -172,7 +177,7 @@ El método de registro podría usarse para iniciar sesión en el terminal para a
 
 También puede usar la [Handler class](https://rich.readthedocs.io/en/latest/logging.html) incorporada  para formatear y colorear la salida del módulo de registro de Python. Aquí hay un ejemplo de la salida:
 
-![Registro](https://github.com/willmcgugan/rich/raw/master/imgs/logging.png)
+![Registro](https://github.com/textualize/rich/raw/master/imgs/logging.png)
 </details>
 
 <details>
@@ -193,9 +198,9 @@ Utilice esta función con prudencia.
 
 Rich puede renderizar [tablas](https://rich.readthedocs.io/en/latest/tables.html) flexibles con caracteres de cuadro Unicode. Existe una gran variedad de opciones de formato para bordes, estilos, alineación de celdas, etc.
 
-![table movie](https://github.com/willmcgugan/rich/raw/master/imgs/table_movie.gif)
+![table movie](https://github.com/textualize/rich/raw/master/imgs/table_movie.gif)
 
-La animación anterior se generó con [table_movie.py](https://github.com/willmcgugan/rich/blob/master/examples/table_movie.py) en el directorio de ejemplos.
+La animación anterior se generó con [table_movie.py](https://github.com/textualize/rich/blob/master/examples/table_movie.py) en el directorio de ejemplos.
 
 Aquí hay un ejemplo de tabla más simple:
 
@@ -231,13 +236,13 @@ console.print(table)
 
 Esto produce la siguiente salida:
 
-![table](https://github.com/willmcgugan/rich/raw/master/imgs/table.png)
+![table](https://github.com/textualize/rich/raw/master/imgs/table.png)
 
 Tenga en cuenta que el marcado de la consola se representa de la misma manera que `print()` y `log()`. De hecho, cualquier cosa que Rich pueda representar se puede incluir en los encabezados / filas (incluso en otras tablas).
 
 La clase `Table` es lo suficientemente inteligente como para cambiar el tamaño de las columnas para que se ajusten al ancho disponible de la terminal, ajustando el texto según sea necesario. Este es el mismo ejemplo, con la terminal más pequeña que la tabla anterior:
 
-![table2](https://github.com/willmcgugan/rich/raw/master/imgs/table2.png)
+![table2](https://github.com/textualize/rich/raw/master/imgs/table2.png)
 
 </details>
 
@@ -257,13 +262,13 @@ for step in track(range(100)):
 
 No es mucho más difícil agregar varias barras de progreso. Aquí hay un ejemplo tomado de la documentación:
 
-![progress](https://github.com/willmcgugan/rich/raw/master/imgs/progress.gif)
+![progress](https://github.com/textualize/rich/raw/master/imgs/progress.gif)
 
 Las columnas pueden configurarse para mostrar los detalles que desee. Las columnas integradas incluyen porcentaje completado, tamaño de archivo, velocidad de archivo y tiempo restante. Aquí hay otro ejemplo que muestra una descarga en progreso:
 
-![progress](https://github.com/willmcgugan/rich/raw/master/imgs/downloader.gif)
+![progress](https://github.com/textualize/rich/raw/master/imgs/downloader.gif)
 
-Para probar esto usted mismo, consulte [examples/downloader.py](https://github.com/willmcgugan/rich/blob/master/examples/downloader.py) que puede descargar varias URL simultáneamente mientras muestra el progreso.
+Para probar esto usted mismo, consulte [examples/downloader.py](https://github.com/textualize/rich/blob/master/examples/downloader.py) que puede descargar varias URL simultáneamente mientras muestra el progreso.
 
 </details>
 
@@ -288,7 +293,7 @@ with console.status("[bold green]Working on tasks...") as status:
 
 Esto genera la siguiente salida en el terminal.
 
-![status](https://github.com/willmcgugan/rich/raw/master/imgs/status.gif)
+![status](https://github.com/textualize/rich/raw/master/imgs/status.gif)
 
 Las animaciones de spinner fueron tomadas de [cli-spinners](https://www.npmjs.com/package/cli-spinners). Puede seleccionar un spinner especificando el `spinner` parameter. Ejecute el siguiente comando para ver los valores disponibles:
 
@@ -298,7 +303,7 @@ python -m rich.spinner
 
 El comando anterior genera la siguiente salida en la terminal:
 
-![spinners](https://github.com/willmcgugan/rich/raw/master/imgs/spinners.gif)
+![spinners](https://github.com/textualize/rich/raw/master/imgs/spinners.gif)
 
 </details>
 
@@ -315,9 +320,9 @@ python -m rich.tree
 
 Esto genera la siguiente salida:
 
-![markdown](https://github.com/willmcgugan/rich/raw/master/imgs/tree.png)
+![markdown](https://github.com/textualize/rich/raw/master/imgs/tree.png)
 
-Ver el ejemplo [tree.py](https://github.com/willmcgugan/rich/blob/master/examples/tree.py) para un script que muestra una vista de  árbol de cualquier directorio, similar a el comando de linux `tree`.
+Ver el ejemplo [tree.py](https://github.com/textualize/rich/blob/master/examples/tree.py) para un script que muestra una vista de  árbol de cualquier directorio, similar a el comando de linux `tree`.
 
 </details>
 
@@ -337,9 +342,9 @@ directory = os.listdir(sys.argv[1])
 print(Columns(directory))
 ```
 
-La siguiente captura de pantalla es el resultado del [ejemplo de columnas](https://github.com/willmcgugan/rich/blob/master/examples/columns.py) que muestra los datos extraídos de una API en columnas:
+La siguiente captura de pantalla es el resultado del [ejemplo de columnas](https://github.com/textualize/rich/blob/master/examples/columns.py) que muestra los datos extraídos de una API en columnas:
 
-![columns](https://github.com/willmcgugan/rich/raw/master/imgs/columns.png)
+![columns](https://github.com/textualize/rich/raw/master/imgs/columns.png)
 
 </details>
 
@@ -362,7 +367,7 @@ console.print(markdown)
 
 Esto producirá una salida similar a la siguiente:
 
-![markdown](https://github.com/willmcgugan/rich/raw/master/imgs/markdown.png)
+![markdown](https://github.com/textualize/rich/raw/master/imgs/markdown.png)
 
 </details>
 
@@ -397,7 +402,7 @@ console.print(syntax)
 
 Esto producirá el siguiente resultado:
 
-![syntax](https://github.com/willmcgugan/rich/raw/master/imgs/syntax.png)
+![syntax](https://github.com/textualize/rich/raw/master/imgs/syntax.png)
 
 </details>
 
@@ -408,7 +413,7 @@ Rich puede representar [tracebacks hermosos](https://rich.readthedocs.io/en/late
 
 Así es como se ve en OSX (similar en Linux):
 
-![traceback](https://github.com/willmcgugan/rich/raw/master/imgs/traceback.png)
+![traceback](https://github.com/textualize/rich/raw/master/imgs/traceback.png)
 
 </details>
 
@@ -448,4 +453,4 @@ Aquí hay algunos proyectos que usan Rich:
   Libreria de Python para agregar tracking a cualquier detector.
 - [ansible/ansible-lint](https://github.com/ansible/ansible-lint) Ansible-lint comprueba los playbooks en busca de prácticas y comportamientos que podrían mejorarse
 - [ansible-community/molecule](https://github.com/ansible-community/molecule) Marco de prueba de Ansible Molecule
-- +¡[Muchos más](https://github.com/willmcgugan/rich/network/dependents)!
+- +¡[Muchos más](https://github.com/textualize/rich/network/dependents)!

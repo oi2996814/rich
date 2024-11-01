@@ -18,7 +18,7 @@ The :meth:`~rich.console.Console.print_exception` method will print a traceback 
 
     try:
         do_something()
-    except Exception:        
+    except Exception:
         console.print_exception(show_locals=True)
 
 The ``show_locals=True`` parameter causes Rich to display the value of local variables for each frame of the traceback.
@@ -61,7 +61,7 @@ At this point, the traceback will be installed for any code that is run within t
 Suppressing Frames
 ------------------
 
-If you are working with a framework (click, django etc), you may only be interested in seeing the code from your own application within the traceback. You can exclude framework code by setting the `suppress` argument on `Traceback`, `install`, and `Console.print_exception`, which should be a list of modules or str paths.
+If you are working with a framework (click, django etc), you may only be interested in seeing the code from your own application within the traceback. You can exclude framework code by setting the `suppress` argument on `Traceback`, `install`, `Console.print_exception`, and `RichHandler`, which should be a list of modules or str paths.
 
 Here's how you would exclude `click <https://click.palletsprojects.com/en/8.0.x/>`_ from Rich exceptions:: 
 
@@ -76,7 +76,7 @@ Max Frames
 
 A recursion error can generate very large tracebacks that take a while to render and contain a lot of repetitive frames. Rich guards against this with a `max_frames` argument, which defaults to 100. If a traceback contains more than 100 frames then only the first 50, and last 50 will be shown. You can disable this feature by setting `max_frames` to 0.
 
-Here's an example of printing an recursive error::
+Here's an example of printing a recursive error::
 
     from rich.console import Console
 

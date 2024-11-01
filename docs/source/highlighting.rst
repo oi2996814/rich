@@ -1,9 +1,11 @@
+.. _highlighting:
+
 Highlighting
 ============
 
-Rich can apply styles to patterns in text which you :meth:`~rich.console.Console.print` or :meth:`~rich.console.Console.log`. With the default settings, Rich will highlight things such as numbers, strings, collections, booleans, None, and a few more exotic patterns such as file paths, URLs and UUIDs.
+Rich will automatically highlight patterns in text, such as numbers, strings, collections, booleans, None, and a few more exotic patterns such as file paths, URLs and UUIDs.
 
-You can disable highlighting either by setting ``highlight=False`` on :meth:`~rich.console.Console.print` or :meth:`~rich.console.Console.log`, or by setting ``highlight=False`` on the :class:`~rich.console.Console` constructor which disables it everywhere. If you disable highlighting on the constructor, you can still selectively *enable* highlighting with ``highlight=True`` on print/log.
+You can disable highlighting either by setting ``highlight=False`` on :meth:`~rich.console.Console.print` or :meth:`~rich.console.Console.log`, or by setting ``highlight=False`` on the :class:`~rich.console.Console` constructor which disables it everywhere. If you disable highlighting on the constructor, you can still selectively *enable* highlighting with ``highlight=True`` on print / log.
 
 Custom Highlighters
 -------------------
@@ -12,8 +14,8 @@ If the default highlighting doesn't fit your needs, you can define a custom high
 
 Here's an example which highlights text that looks like an email address::
 
-    from rich.console import Console  
-    from rich.highlighter import RegexHighlighter      
+    from rich.console import Console
+    from rich.highlighter import RegexHighlighter
     from rich.theme import Theme
 
     class EmailHighlighter(RegexHighlighter):
@@ -56,3 +58,11 @@ Here's a silly example that highlights every character with a different color::
 
     rainbow = RainbowHighlighter()
     print(rainbow("I must not fear. Fear is the mind-killer."))
+
+Builtin Highlighters
+--------------------
+
+The following builtin highlighters are available.
+
+* :class:`~rich.highlighter.ISO8601Highlighter` Highlights ISO8601 date time strings.
+* :class:`~rich.highlighter.JSONHighlighter` Highlights JSON formatted strings.

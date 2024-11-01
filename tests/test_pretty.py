@@ -1,26 +1,19 @@
-from array import array
-from collections import defaultdict, UserDict, UserList
-from dataclasses import dataclass, field
+import collections
 import io
 import sys
-from typing import List
+from array import array
+from collections import UserDict, defaultdict, deque
+from dataclasses import dataclass, field
+from typing import Any, List, NamedTuple
 
 import attr
 import pytest
 
 from rich.console import Console
-from rich.pretty import install, Pretty, pprint, pretty_repr, Node
+from rich.measure import Measurement
+from rich.pretty import Node, Pretty, _ipy_display_hook, install, pprint, pretty_repr
+from rich.text import Text
 
-
-skip_py36 = pytest.mark.skipif(
-    sys.version_info.minor == 6 and sys.version_info.major == 3,
-    reason="rendered differently on py3.6",
-)
-
-skip_py37 = pytest.mark.skipif(
-    sys.version_info.minor == 7 and sys.version_info.major == 3,
-    reason="rendered differently on py3.7",
-)
 skip_py38 = pytest.mark.skipif(
     sys.version_info.minor == 8 and sys.version_info.major == 3,
     reason="rendered differently on py3.8",
@@ -33,9 +26,21 @@ skip_py310 = pytest.mark.skipif(
     sys.version_info.minor == 10 and sys.version_info.major == 3,
     reason="rendered differently on py3.10",
 )
+skip_py311 = pytest.mark.skipif(
+    sys.version_info.minor == 11 and sys.version_info.major == 3,
+    reason="rendered differently on py3.11",
+)
+skip_py312 = pytest.mark.skipif(
+    sys.version_info.minor == 12 and sys.version_info.major == 3,
+    reason="rendered differently on py3.12",
+)
+skip_py313 = pytest.mark.skipif(
+    sys.version_info.minor == 13 and sys.version_info.major == 3,
+    reason="rendered differently on py3.13",
+)
 
 
-def test_install():
+def test_install() -> None:
     console = Console(file=io.StringIO())
     dh = sys.displayhook
     install(console)
@@ -44,7 +49,95 @@ def test_install():
     assert sys.displayhook is not dh
 
 
-def test_pretty():
+def test_install_max_depth() -> None:
+    console = Console(file=io.StringIO())
+    dh = sys.displayhook
+    install(console, max_depth=1)
+    sys.displayhook({"foo": {"bar": True}})
+    assert console.file.getvalue() == "{'foo': {...}}\n"
+    assert sys.displayhook is not dh
+
+
+def test_ipy_display_hook__repr_html() -> None:
+    console = Console(file=io.StringIO(), force_jupyter=True)
+
+    class Thing:
+        def _repr_html_(self):
+            return "hello"
+
+    console.begin_capture()
+    _ipy_display_hook(Thing(), console=console)
+
+    # Rendering delegated to notebook because _repr_html_ method exists
+    assert console.end_capture() == ""
+
+
+def test_ipy_display_hook__multiple_special_reprs() -> None:
+    """
+    The case where there are multiple IPython special _repr_*_
+    methods on the object, and one of them returns None but another
+    one does not.
+    """
+    console = Console(file=io.StringIO(), force_jupyter=True)
+
+    class Thing:
+        def __repr__(self):
+            return "A Thing"
+
+        def _repr_latex_(self):
+            return None
+
+        def _repr_html_(self):
+            return "hello"
+
+    result = _ipy_display_hook(Thing(), console=console)
+    assert result == "A Thing"
+
+
+def test_ipy_display_hook__no_special_repr_methods() -> None:
+    console = Console(file=io.StringIO(), force_jupyter=True)
+
+    class Thing:
+        def __repr__(self) -> str:
+            return "hello"
+
+    result = _ipy_display_hook(Thing(), console=console)
+    # should be repr as-is
+    assert result == "hello"
+
+
+def test_ipy_display_hook__special_repr_raises_exception() -> None:
+    """
+    When an IPython special repr method raises an exception,
+    we treat it as if it doesn't exist and look for the next.
+    """
+    console = Console(file=io.StringIO(), force_jupyter=True)
+
+    class Thing:
+        def _repr_markdown_(self):
+            raise Exception()
+
+        def _repr_latex_(self):
+            return None
+
+        def _repr_html_(self):
+            return "hello"
+
+        def __repr__(self):
+            return "therepr"
+
+    result = _ipy_display_hook(Thing(), console=console)
+    assert result == "therepr"
+
+
+def test_ipy_display_hook__console_renderables_on_newline() -> None:
+    console = Console(file=io.StringIO(), force_jupyter=True)
+    console.begin_capture()
+    result = _ipy_display_hook(Text("hello"), console=console)
+    assert result == "\nhello"
+
+
+def test_pretty() -> None:
     test = {
         "foo": [1, 2, 3, (4, 5, {6}, 7, 8, {9}), {}],
         "bar": {"egg": "baz", "words": ["Hello World"] * 10},
@@ -55,7 +148,6 @@ def test_pretty():
 
     result = pretty_repr(test, max_width=80)
     print(result)
-    # print(repr(result))
     expected = "{\n    'foo': [1, 2, 3, (4, 5, {6}, 7, 8, {9}), {}],\n    'bar': {\n        'egg': 'baz',\n        'words': [\n            'Hello World',\n            'Hello World',\n            'Hello World',\n            'Hello World',\n            'Hello World',\n            'Hello World',\n            'Hello World',\n            'Hello World',\n            'Hello World',\n            'Hello World'\n        ]\n    },\n    False: 'foo',\n    True: '',\n    'text': ('Hello World', 'foo bar baz egg')\n}"
     print(expected)
     assert result == expected
@@ -70,7 +162,12 @@ class ExampleDataclass:
     last: int = field(default=1, repr=False)
 
 
-def test_pretty_dataclass():
+@dataclass
+class Empty:
+    pass
+
+
+def test_pretty_dataclass() -> None:
     dc = ExampleDataclass(1000, "Hello, World", 999, ["foo", "bar", "baz"])
     result = pretty_repr(dc, max_width=80)
     print(repr(result))
@@ -90,15 +187,101 @@ def test_pretty_dataclass():
     assert result == "ExampleDataclass(foo=1000, bar=..., baz=['foo', 'bar', 'baz'])"
 
 
-def test_small_width():
+def test_empty_dataclass() -> None:
+    assert pretty_repr(Empty()) == "Empty()"
+    assert pretty_repr([Empty()]) == "[Empty()]"
+
+
+class StockKeepingUnit(NamedTuple):
+    name: str
+    description: str
+    price: float
+    category: str
+    reviews: List[str]
+
+
+def test_pretty_namedtuple() -> None:
+    console = Console(color_system=None)
+    console.begin_capture()
+
+    example_namedtuple = StockKeepingUnit(
+        "Sparkling British Spring Water",
+        "Carbonated spring water",
+        0.9,
+        "water",
+        ["its amazing!", "its terrible!"],
+    )
+
+    result = pretty_repr(example_namedtuple)
+
+    print(result)
+    assert (
+        result
+        == """StockKeepingUnit(
+    name='Sparkling British Spring Water',
+    description='Carbonated spring water',
+    price=0.9,
+    category='water',
+    reviews=['its amazing!', 'its terrible!']
+)"""
+    )
+
+
+def test_pretty_namedtuple_length_one_no_trailing_comma() -> None:
+    instance = collections.namedtuple("Thing", ["name"])(name="Bob")
+    assert pretty_repr(instance) == "Thing(name='Bob')"
+
+
+def test_pretty_namedtuple_empty() -> None:
+    instance = collections.namedtuple("Thing", [])()
+    assert pretty_repr(instance) == "Thing()"
+
+
+def test_pretty_namedtuple_custom_repr() -> None:
+    class Thing(NamedTuple):
+        def __repr__(self):
+            return "XX"
+
+    assert pretty_repr(Thing()) == "XX"
+
+
+def test_pretty_namedtuple_fields_invalid_type() -> None:
+    class LooksLikeANamedTupleButIsnt(tuple):
+        _fields = "blah"
+
+    instance = LooksLikeANamedTupleButIsnt()
+    result = pretty_repr(instance)
+    assert result == "()"  # Treated as tuple
+
+
+def test_pretty_namedtuple_max_depth() -> None:
+    instance = {"unit": StockKeepingUnit("a", "b", 1.0, "c", ["d", "e"])}
+    result = pretty_repr(instance, max_depth=1)
+    assert result == "{'unit': StockKeepingUnit(...)}"
+
+
+def test_small_width() -> None:
     test = ["Hello world! 12345"]
     result = pretty_repr(test, max_width=10)
     expected = "[\n    'Hello world! 12345'\n]"
     assert result == expected
 
 
-@skip_py36
-def test_broken_repr():
+def test_ansi_in_pretty_repr() -> None:
+    class Hello:
+        def __repr__(self):
+            return "Hello \x1b[38;5;239mWorld!"
+
+    pretty = Pretty(Hello())
+
+    console = Console(file=io.StringIO(), record=True)
+    console.print(pretty)
+    result = console.export_text()
+
+    assert result == "Hello World!\n"
+
+
+def test_broken_repr() -> None:
     class BrokenRepr:
         def __repr__(self):
             1 / 0
@@ -109,8 +292,7 @@ def test_broken_repr():
     assert result == expected
 
 
-@skip_py36
-def test_broken_getattr():
+def test_broken_getattr() -> None:
     class BrokenAttr:
         def __getattr__(self, name):
             1 / 0
@@ -123,36 +305,236 @@ def test_broken_getattr():
     assert result == "BrokenAttr()"
 
 
-def test_recursive():
+def test_reference_cycle_container() -> None:
     test = []
     test.append(test)
-    result = pretty_repr(test)
-    expected = "[...]"
-    assert result == expected
+    res = pretty_repr(test)
+    assert res == "[...]"
+
+    test = [1, []]
+    test[1].append(test)
+    res = pretty_repr(test)
+    assert res == "[1, [...]]"
+
+    # Not a cyclic reference, just a repeated reference
+    a = [2]
+    test = [1, [a, a]]
+    res = pretty_repr(test)
+    assert res == "[1, [[2], [2]]]"
 
 
-def test_defaultdict():
+def test_reference_cycle_namedtuple() -> None:
+    class Example(NamedTuple):
+        x: int
+        y: Any
+
+    test = Example(1, [Example(2, [])])
+    test.y[0].y.append(test)
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=[Example(x=2, y=[...])])"
+
+    # Not a cyclic reference, just a repeated reference
+    a = Example(2, None)
+    test = Example(1, [a, a])
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=[Example(x=2, y=None), Example(x=2, y=None)])"
+
+
+def test_reference_cycle_dataclass() -> None:
+    @dataclass
+    class Example:
+        x: int
+        y: Any
+
+    test = Example(1, None)
+    test.y = test
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=...)"
+
+    test = Example(1, Example(2, None))
+    test.y.y = test
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=Example(x=2, y=...))"
+
+    # Not a cyclic reference, just a repeated reference
+    a = Example(2, None)
+    test = Example(1, [a, a])
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=[Example(x=2, y=None), Example(x=2, y=None)])"
+
+
+def test_reference_cycle_attrs() -> None:
+    @attr.define
+    class Example:
+        x: int
+        y: Any
+
+    test = Example(1, None)
+    test.y = test
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=...)"
+
+    test = Example(1, Example(2, None))
+    test.y.y = test
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=Example(x=2, y=...))"
+
+    # Not a cyclic reference, just a repeated reference
+    a = Example(2, None)
+    test = Example(1, [a, a])
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=[Example(x=2, y=None), Example(x=2, y=None)])"
+
+
+def test_reference_cycle_custom_repr() -> None:
+    class Example:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+
+        def __rich_repr__(self):
+            yield ("x", self.x)
+            yield ("y", self.y)
+
+    test = Example(1, None)
+    test.y = test
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=...)"
+
+    test = Example(1, Example(2, None))
+    test.y.y = test
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=Example(x=2, y=...))"
+
+    # Not a cyclic reference, just a repeated reference
+    a = Example(2, None)
+    test = Example(1, [a, a])
+    res = pretty_repr(test)
+    assert res == "Example(x=1, y=[Example(x=2, y=None), Example(x=2, y=None)])"
+
+
+def test_max_depth() -> None:
+    d = {}
+    d["foo"] = {"fob": {"a": [1, 2, 3], "b": {"z": "x", "y": ["a", "b", "c"]}}}
+
+    assert pretty_repr(d, max_depth=0) == "{...}"
+    assert pretty_repr(d, max_depth=1) == "{'foo': {...}}"
+    assert pretty_repr(d, max_depth=2) == "{'foo': {'fob': {...}}}"
+    assert pretty_repr(d, max_depth=3) == "{'foo': {'fob': {'a': [...], 'b': {...}}}}"
+    assert (
+        pretty_repr(d, max_width=100, max_depth=4)
+        == "{'foo': {'fob': {'a': [1, 2, 3], 'b': {'z': 'x', 'y': [...]}}}}"
+    )
+    assert (
+        pretty_repr(d, max_width=100, max_depth=5)
+        == "{'foo': {'fob': {'a': [1, 2, 3], 'b': {'z': 'x', 'y': ['a', 'b', 'c']}}}}"
+    )
+    assert (
+        pretty_repr(d, max_width=100, max_depth=None)
+        == "{'foo': {'fob': {'a': [1, 2, 3], 'b': {'z': 'x', 'y': ['a', 'b', 'c']}}}}"
+    )
+
+
+def test_max_depth_rich_repr() -> None:
+    class Foo:
+        def __init__(self, foo):
+            self.foo = foo
+
+        def __rich_repr__(self):
+            yield "foo", self.foo
+
+    class Bar:
+        def __init__(self, bar):
+            self.bar = bar
+
+        def __rich_repr__(self):
+            yield "bar", self.bar
+
+    assert (
+        pretty_repr(Foo(foo=Bar(bar=Foo(foo=[]))), max_depth=2)
+        == "Foo(foo=Bar(bar=Foo(...)))"
+    )
+
+
+def test_max_depth_attrs() -> None:
+    @attr.define
+    class Foo:
+        foo = attr.field()
+
+    @attr.define
+    class Bar:
+        bar = attr.field()
+
+    assert (
+        pretty_repr(Foo(foo=Bar(bar=Foo(foo=[]))), max_depth=2)
+        == "Foo(foo=Bar(bar=Foo(...)))"
+    )
+
+
+def test_max_depth_dataclass() -> None:
+    @dataclass
+    class Foo:
+        foo: object
+
+    @dataclass
+    class Bar:
+        bar: object
+
+    assert (
+        pretty_repr(Foo(foo=Bar(bar=Foo(foo=[]))), max_depth=2)
+        == "Foo(foo=Bar(bar=Foo(...)))"
+    )
+
+
+def test_defaultdict() -> None:
     test_dict = defaultdict(int, {"foo": 2})
     result = pretty_repr(test_dict)
     assert result == "defaultdict(<class 'int'>, {'foo': 2})"
 
 
-def test_array():
+def test_deque() -> None:
+    test_deque = deque([1, 2, 3])
+    result = pretty_repr(test_deque)
+    assert result == "deque([1, 2, 3])"
+    test_deque = deque([1, 2, 3], maxlen=None)
+    result = pretty_repr(test_deque)
+    assert result == "deque([1, 2, 3])"
+    test_deque = deque([1, 2, 3], maxlen=5)
+    result = pretty_repr(test_deque)
+    assert result == "deque([1, 2, 3], maxlen=5)"
+    test_deque = deque([1, 2, 3], maxlen=0)
+    result = pretty_repr(test_deque)
+    assert result == "deque(maxlen=0)"
+    test_deque = deque([])
+    result = pretty_repr(test_deque)
+    assert result == "deque()"
+    test_deque = deque([], maxlen=None)
+    result = pretty_repr(test_deque)
+    assert result == "deque()"
+    test_deque = deque([], maxlen=5)
+    result = pretty_repr(test_deque)
+    assert result == "deque(maxlen=5)"
+    test_deque = deque([], maxlen=0)
+    result = pretty_repr(test_deque)
+    assert result == "deque(maxlen=0)"
+
+
+def test_array() -> None:
     test_array = array("I", [1, 2, 3])
     result = pretty_repr(test_array)
     assert result == "array('I', [1, 2, 3])"
 
 
-def test_tuple_of_one():
+def test_tuple_of_one() -> None:
     assert pretty_repr((1,)) == "(1,)"
 
 
-def test_node():
+def test_node() -> None:
     node = Node("abc")
     assert pretty_repr(node) == "abc: "
 
 
-def test_indent_lines():
+def test_indent_lines() -> None:
     console = Console(width=100, color_system=None)
     console.begin_capture()
     console.print(Pretty([100, 200], indent_guides=True), width=8)
@@ -168,35 +550,35 @@ def test_indent_lines():
     assert result == expected
 
 
-def test_pprint():
+def test_pprint() -> None:
     console = Console(color_system=None)
     console.begin_capture()
     pprint(1, console=console)
     assert console.end_capture() == "1\n"
 
 
-def test_pprint_max_values():
+def test_pprint_max_values() -> None:
     console = Console(color_system=None)
     console.begin_capture()
     pprint([1, 2, 3, 4, 5, 6, 7, 8, 9, 0], console=console, max_length=2)
     assert console.end_capture() == "[1, 2, ... +8]\n"
 
 
-def test_pprint_max_items():
+def test_pprint_max_items() -> None:
     console = Console(color_system=None)
     console.begin_capture()
     pprint({"foo": 1, "bar": 2, "egg": 3}, console=console, max_length=2)
     assert console.end_capture() == """{'foo': 1, 'bar': 2, ... +1}\n"""
 
 
-def test_pprint_max_string():
+def test_pprint_max_string() -> None:
     console = Console(color_system=None)
     console.begin_capture()
     pprint(["Hello" * 20], console=console, max_string=8)
     assert console.end_capture() == """['HelloHel'+92]\n"""
 
 
-def test_tuples():
+def test_tuples() -> None:
     console = Console(color_system=None)
     console.begin_capture()
     pprint((1,), console=console)
@@ -211,7 +593,7 @@ def test_tuples():
     assert result == expected
 
 
-def test_newline():
+def test_newline() -> None:
     console = Console(color_system=None)
     console.begin_capture()
     console.print(Pretty((1,), insert_line=True, expand_all=True))
@@ -220,7 +602,7 @@ def test_newline():
     assert result == expected
 
 
-def test_empty_repr():
+def test_empty_repr() -> None:
     class Foo:
         def __repr__(self):
             return ""
@@ -228,7 +610,7 @@ def test_empty_repr():
     assert pretty_repr(Foo()) == ""
 
 
-def test_attrs():
+def test_attrs() -> None:
     @attr.define
     class Point:
         x: int
@@ -242,7 +624,7 @@ def test_attrs():
     assert result == expected
 
 
-def test_attrs_empty():
+def test_attrs_empty() -> None:
     @attr.define
     class Nada:
         pass
@@ -253,9 +635,11 @@ def test_attrs_empty():
     assert result == expected
 
 
-@skip_py36
 @skip_py310
-def test_attrs_broken():
+@skip_py311
+@skip_py312
+@skip_py313
+def test_attrs_broken() -> None:
     @attr.define
     class Foo:
         bar: int
@@ -268,11 +652,9 @@ def test_attrs_broken():
     assert result == expected
 
 
-@skip_py36
-@skip_py37
 @skip_py38
 @skip_py39
-def test_attrs_broken_310():
+def test_attrs_broken_310() -> None:
     @attr.define
     class Foo:
         bar: int
@@ -281,11 +663,14 @@ def test_attrs_broken_310():
     del foo.bar
     result = pretty_repr(foo)
     print(repr(result))
-    expected = "Foo(bar=AttributeError(\"'Foo' object has no attribute 'bar'\"))"
+    if sys.version_info >= (3, 13):
+        expected = "Foo(\n    bar=AttributeError(\"'tests.test_pretty.test_attrs_broken_310.<locals>.Foo' object has no attribute 'bar'\")\n)"
+    else:
+        expected = "Foo(bar=AttributeError(\"'Foo' object has no attribute 'bar'\"))"
     assert result == expected
 
 
-def test_user_dict():
+def test_user_dict() -> None:
     class D1(UserDict):
         pass
 
@@ -303,7 +688,7 @@ def test_user_dict():
     assert result == "FOO"
 
 
-def test_lying_attribute():
+def test_lying_attribute() -> None:
     """Test getattr doesn't break rich repr protocol"""
 
     class Foo:
@@ -313,3 +698,57 @@ def test_lying_attribute():
     foo = Foo()
     result = pretty_repr(foo)
     assert "Foo" in result
+
+
+def test_measure_pretty() -> None:
+    """Test measure respects expand_all"""
+    # https://github.com/Textualize/rich/issues/1998
+    console = Console()
+    pretty = Pretty(["alpha", "beta", "delta", "gamma"], expand_all=True)
+
+    measurement = console.measure(pretty)
+    assert measurement == Measurement(12, 12)
+
+
+def test_tuple_rich_repr() -> None:
+    """
+    Test that can use None as key to have tuple positional values.
+    """
+
+    class Foo:
+        def __rich_repr__(self):
+            yield None, (1,)
+
+    assert pretty_repr(Foo()) == "Foo((1,))"
+
+
+def test_tuple_rich_repr_default() -> None:
+    """
+    Test that can use None as key to have tuple positional values and with a default.
+    """
+
+    class Foo:
+        def __rich_repr__(self):
+            yield None, (1,), (1,)
+
+    assert pretty_repr(Foo()) == "Foo()"
+
+
+def test_dataclass_no_attribute() -> None:
+    """Regression test for https://github.com/Textualize/rich/issues/3417"""
+    from dataclasses import dataclass, field
+
+    @dataclass(eq=False)
+    class BadDataclass:
+        item: int = field(init=False)
+
+    # item is not provided
+    bad_data_class = BadDataclass()
+
+    console = Console()
+    with console.capture() as capture:
+        console.print(bad_data_class)
+
+    expected = "BadDataclass()\n"
+    result = capture.get()
+    assert result == expected

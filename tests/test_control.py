@@ -1,5 +1,5 @@
-from rich.control import Control, strip_control_codes
-from rich.segment import Segment, ControlType
+from rich.control import Control, escape_control_codes, strip_control_codes
+from rich.segment import ControlType, Segment
 
 
 def test_control():
@@ -11,6 +11,12 @@ def test_strip_control_codes():
     assert strip_control_codes("") == ""
     assert strip_control_codes("foo\rbar") == "foobar"
     assert strip_control_codes("Fear is the mind killer") == "Fear is the mind killer"
+
+
+def test_escape_control_codes():
+    assert escape_control_codes("") == ""
+    assert escape_control_codes("foo\rbar") == "foo\\rbar"
+    assert escape_control_codes("Fear is the mind killer") == "Fear is the mind killer"
 
 
 def test_control_move_to():
@@ -44,4 +50,13 @@ def test_move_to_column():
         "\x1b[11G\x1b[20A",
         None,
         [(ControlType.CURSOR_MOVE_TO_COLUMN, 10), (ControlType.CURSOR_UP, 20)],
+    )
+
+
+def test_title():
+    control_segment = Control.title("hello").segment
+    assert control_segment == Segment(
+        "\x1b]0;hello\x07",
+        None,
+        [(ControlType.SET_WINDOW_TITLE, "hello")],
     )

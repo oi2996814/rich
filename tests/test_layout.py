@@ -1,4 +1,5 @@
 import sys
+
 import pytest
 
 from rich.console import Console
@@ -77,7 +78,7 @@ def test_tree():
         console.print(layout.tree, height=10)
     result = capture.get()
     print(repr(result))
-    expected = "⬍ Layout(name='root')                                       \n├── ⬍ Layout(size=2)                                        \n└── ⬌ Layout(name='bar')                                    \n    ├── ⬍ Layout()                                          \n    └── ⬍ Layout()                                          \n"
+    expected = "⬍ Layout(name='root')\n├── ⬍ Layout(size=2)\n└── ⬌ Layout(name='bar')\n    ├── ⬍ Layout()\n    └── ⬍ Layout()\n"
     print(result, "\n", expected)
     assert result == expected
 
@@ -86,7 +87,7 @@ def test_tree():
 def test_refresh_screen():
     layout = Layout()
     layout.split_row(Layout(name="foo"), Layout(name="bar"))
-    console = Console(force_terminal=True, width=20, height=5)
+    console = Console(force_terminal=True, width=20, height=5, _environ={})
     with console.capture():
         console.print(layout)
     with console.screen():

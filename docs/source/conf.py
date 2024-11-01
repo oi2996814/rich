@@ -17,21 +17,25 @@
 
 # -- Project information -----------------------------------------------------
 
-
-import pkg_resources
+import sys
 
 import sphinx_rtd_theme
+
+if sys.version_info >= (3, 8):
+    from importlib.metadata import Distribution
+else:
+    from importlib_metadata import Distribution
 
 html_theme = "sphinx_rtd_theme"
 
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 project = "Rich"
-copyright = "2020, Will McGugan"
+copyright = "Will McGugan"
 author = "Will McGugan"
 
 # The full version, including alpha/beta/rc tags
-release = pkg_resources.get_distribution("rich").version
+release = Distribution.from_name("rich").version
 
 
 # -- General configuration ---------------------------------------------------
@@ -70,3 +74,9 @@ exclude_patterns = []
 html_static_path = ["_static"]
 
 intersphinx_mapping = {"python": ("http://docs.python.org/3", None)}
+
+autodoc_typehints = "description"
+
+html_css_files = [
+    "https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/fira_code.min.css"
+]

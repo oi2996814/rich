@@ -4,7 +4,7 @@ A rudimentary URL downloader (like wget or curl) to demonstrate Rich progress ba
 
 import os.path
 import sys
-from concurrent.futures import as_completed, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 import signal
 from functools import partial
 from threading import Event
@@ -61,7 +61,7 @@ def copy_url(task_id: TaskID, url: str, path: str) -> None:
 
 
 def download(urls: Iterable[str], dest_dir: str):
-    """Download multuple files to the given directory."""
+    """Download multiple files to the given directory."""
 
     with progress:
         with ThreadPoolExecutor(max_workers=4) as pool:
@@ -73,7 +73,8 @@ def download(urls: Iterable[str], dest_dir: str):
 
 
 if __name__ == "__main__":
-    # Try with https://releases.ubuntu.com/20.04/ubuntu-20.04.3-desktop-amd64.iso
+    # Try with https://releases.ubuntu.com/noble/ubuntu-24.04-desktop-amd64.iso
+    # and https://releases.ubuntu.com/noble/ubuntu-24.04-live-server-amd64.iso
     if sys.argv[1:]:
         download(sys.argv[1:], "./")
     else:

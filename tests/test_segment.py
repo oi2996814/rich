@@ -2,8 +2,8 @@ from io import StringIO
 
 import pytest
 
-from rich.segment import ControlType
-from rich.segment import Segment, Segments, SegmentLines
+from rich.cells import cell_len
+from rich.segment import ControlType, Segment, SegmentLines, Segments
 from rich.style import Style
 
 
@@ -166,7 +166,7 @@ def test_divide():
     ]
 
 
-# https://github.com/willmcgugan/rich/issues/1755
+# https://github.com/textualize/rich/issues/1755
 def test_divide_complex():
     MAP = (
         "[on orange4]          [on green]XX[on orange4]          \n"
@@ -179,8 +179,8 @@ def test_divide_complex():
         "[on orange4]                        \n"
         "          [on green]XX[on orange4]          \n"
     )
-    from rich.text import Text
     from rich.console import Console
+    from rich.text import Text
 
     text = Text.from_markup(MAP)
     console = Console(
@@ -274,10 +274,59 @@ def test_divide_edge_2():
         ("💩X💩Y💩Z💩A💩", 4, (Segment("💩X "), Segment(" Y💩Z💩A💩"))),
         ("XYZABC", 4, (Segment("XYZA"), Segment("BC"))),
         ("XYZABC", 5, (Segment("XYZAB"), Segment("C"))),
+        (
+            "a1あ１１bcdaef",
+            9,
+            (Segment("a1あ１１b"), Segment("cdaef")),
+        ),
     ],
 )
 def test_split_cells_emoji(text, split, result):
     assert Segment(text).split_cells(split) == result
+
+
+@pytest.mark.parametrize(
+    "segment",
+    [
+        Segment("早乙女リリエル (CV: 徳井青）"),
+        Segment("メイド・イン・きゅんクチュアリ☆    "),
+        Segment("TVアニメ「メルクストーリア -無気力少年と瓶の中の少女-」 主題歌CD"),
+        Segment("南無阿弥JKうらめしや?！     "),
+        Segment("メルク (CV: 水瀬いのり)     "),
+        Segment(" メルク (CV: 水瀬いのり)     "),
+        Segment("  メルク (CV: 水瀬いのり)     "),
+        Segment("  メルク (CV: 水瀬いのり)      "),
+    ],
+)
+def test_split_cells_mixed(segment: Segment) -> None:
+    """Check that split cells splits on cell positions."""
+    # Caused https://github.com/Textualize/textual/issues/4996 in Textual
+
+    for position in range(0, segment.cell_length + 1):
+        left, right = Segment.split_cells(segment, position)
+        assert all(
+            cell_len(c) > 0 for c in segment.text
+        )  # Sanity check there aren't any sneaky control codes
+        assert cell_len(left.text) == position
+        assert cell_len(right.text) == segment.cell_length - position
+
+
+def test_split_cells_doubles() -> None:
+    """Check that split cells splits on cell positions with all double width characters."""
+    test = Segment("早" * 20)
+    for position in range(1, test.cell_length):
+        left, right = Segment.split_cells(test, position)
+        assert cell_len(left.text) == position
+        assert cell_len(right.text) == test.cell_length - position
+
+
+def test_split_cells_single() -> None:
+    """Check that split cells splits on cell positions with all single width characters."""
+    test = Segment("A" * 20)
+    for position in range(1, test.cell_length):
+        left, right = Segment.split_cells(test, position)
+        assert cell_len(left.text) == position
+        assert cell_len(right.text) == test.cell_length - position
 
 
 def test_segment_lines_renderable():
@@ -298,4 +347,34 @@ def test_segment_lines_renderable():
         Segment("\n"),
         Segment("foo"),
         Segment("\n"),
+    ]
+
+
+def test_align_top():
+    lines = [[Segment("X")]]
+    assert Segment.align_top(lines, 3, 1, Style()) == lines
+    assert Segment.align_top(lines, 3, 3, Style()) == [
+        [Segment("X")],
+        [Segment("   ", Style())],
+        [Segment("   ", Style())],
+    ]
+
+
+def test_align_middle():
+    lines = [[Segment("X")]]
+    assert Segment.align_middle(lines, 3, 1, Style()) == lines
+    assert Segment.align_middle(lines, 3, 3, Style()) == [
+        [Segment("   ", Style())],
+        [Segment("X")],
+        [Segment("   ", Style())],
+    ]
+
+
+def test_align_bottom():
+    lines = [[Segment("X")]]
+    assert Segment.align_bottom(lines, 3, 1, Style()) == lines
+    assert Segment.align_bottom(lines, 3, 3, Style()) == [
+        [Segment("   ", Style())],
+        [Segment("   ", Style())],
+        [Segment("X")],
     ]

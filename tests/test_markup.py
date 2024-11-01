@@ -1,8 +1,9 @@
 import pytest
 
 from rich.console import Console
-from rich.markup import escape, MarkupError, _parse, render, Tag, RE_TAGS
-from rich.text import Span
+from rich.errors import MarkupError
+from rich.markup import RE_TAGS, Tag, _parse, escape, render
+from rich.text import Span, Text
 
 
 def test_re_no_match():
@@ -21,6 +22,9 @@ def test_re_match():
     assert RE_TAGS.match("[color(1)]")
     assert RE_TAGS.match("[#ff00ff]")
     assert RE_TAGS.match("[/]")
+    assert RE_TAGS.match("[@]")
+    assert RE_TAGS.match("[@foo]")
+    assert RE_TAGS.match("[@foo=bar]")
 
 
 def test_escape():
@@ -31,6 +35,25 @@ def test_escape():
     # Not tags (escape not required)
     assert escape("[5]") == "[5]"
     assert escape("\\[5]") == "\\[5]"
+
+    # Test @ escape
+    assert escape("[@foo]") == "\\[@foo]"
+    assert escape("[@]") == "\\[@]"
+
+    # https://github.com/Textualize/rich/issues/2187
+    assert escape("[nil, [nil]]") == r"[nil, \[nil]]"
+
+
+def test_escape_backslash_end():
+    # https://github.com/Textualize/rich/issues/2987
+    value = "C:\\"
+    assert escape(value) == "C:\\\\"
+
+    escaped_tags = f"[red]{escape(value)}[/red]"
+    assert escaped_tags == "[red]C:\\\\[/red]"
+    escaped_text = Text.from_markup(escaped_tags)
+    assert escaped_text.plain == "C:\\"
+    assert escaped_text.spans == [Span(0, 3, "red")]
 
 
 def test_render_escape():
@@ -132,6 +155,11 @@ def test_markup_error():
         assert render("[foo]hello[/bar]")
 
 
+def test_markup_escape():
+    result = str(render("[dim white][url=[/]"))
+    assert result == "[url="
+
+
 def test_escape_escape():
     # Escaped escapes (i.e. double backslash)should be treated as literal
     result = render(r"\\[bold]FOO")
@@ -158,7 +186,6 @@ def test_escape_escape():
 
 
 def test_events():
-
     result = render("[@click]Hello[/@click] [@click='view.toggle', 'left']World[/]")
     assert str(result) == "Hello World"
 

@@ -1,24 +1,28 @@
 import datetime
 import io
 import os
+import subprocess
 import sys
 import tempfile
-from typing import Optional
+from typing import Optional, Tuple, Type, Union
+from unittest import mock
 
 import pytest
 
 from rich import errors
+from rich._null_file import NullFile
 from rich.color import ColorSystem
 from rich.console import (
     CaptureError,
     Console,
     ConsoleDimensions,
     ConsoleOptions,
-    group,
     ScreenUpdate,
+    group,
 )
 from rich.control import Control
 from rich.measure import measure_renderables
+from rich.padding import Padding
 from rich.pager import SystemPager
 from rich.panel import Panel
 from rich.region import Region
@@ -26,6 +30,8 @@ from rich.segment import Segment
 from rich.status import Status
 from rich.style import Style
 from rich.text import Text
+
+os.get_terminal_size
 
 
 def test_dumb_terminal():
@@ -61,6 +67,16 @@ def test_truecolor_terminal():
         _environ={"COLORTERM": "truecolor", "TERM": "xterm-16color"},
     )
     assert console.color_system == "truecolor"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+def test_kitty_terminal():
+    console = Console(
+        force_terminal=True,
+        legacy_windows=False,
+        _environ={"TERM": "xterm-kitty"},
+    )
+    assert console.color_system == "256"
 
 
 def test_console_options_update():
@@ -120,6 +136,48 @@ def test_size():
     console = Console(width=99, height=101, legacy_windows=False)
     w, h = console.size
     assert w == 99 and h == 101
+
+
+@pytest.mark.parametrize(
+    "is_windows,no_descriptor_size,stdin_size,stdout_size,stderr_size,expected_size",
+    [
+        # on Windows we'll use `os.get_terminal_size()` without arguments...
+        (True, (133, 24), ValueError, ValueError, ValueError, (80, 25)),
+        (False, (133, 24), ValueError, ValueError, ValueError, (80, 25)),
+        # ...while on other OS we'll try to pass stdin, then stdout, then stderr to it:
+        (False, ValueError, (133, 24), ValueError, ValueError, (133, 24)),
+        (False, ValueError, ValueError, (133, 24), ValueError, (133, 24)),
+        (False, ValueError, ValueError, ValueError, (133, 24), (133, 24)),
+        (False, ValueError, ValueError, ValueError, ValueError, (80, 25)),
+    ],
+)
+@mock.patch("rich.console.os.get_terminal_size")
+def test_size_can_fall_back_to_std_descriptors(
+    get_terminal_size_mock: mock.MagicMock,
+    is_windows: bool,
+    no_descriptor_size: Union[Tuple[int, int], Type[ValueError]],
+    stdin_size: Union[Tuple[int, int], Type[ValueError]],
+    stdout_size: Union[Tuple[int, int], Type[ValueError]],
+    stderr_size: Union[Tuple[int, int], Type[ValueError]],
+    expected_size: Tuple[int, int],
+) -> None:
+    def get_terminal_size_mock_impl(fileno: int = None) -> Tuple[int, int]:
+        value = {
+            None: no_descriptor_size,
+            sys.__stdin__.fileno(): stdin_size,
+            sys.__stdout__.fileno(): stdout_size,
+            sys.__stderr__.fileno(): stderr_size,
+        }[fileno]
+        if value is ValueError:
+            raise value
+        return value
+
+    get_terminal_size_mock.side_effect = get_terminal_size_mock_impl
+
+    console = Console(legacy_windows=False)
+    with mock.patch("rich.console.WINDOWS", new=is_windows):
+        w, h = console.size
+    assert (w, h) == expected_size
 
 
 def test_repr():
@@ -183,6 +241,33 @@ def test_print_json_ensure_ascii():
     print(repr(result))
     expected = '\x1b[1m{\x1b[0m\n  \x1b[1;34m"foo"\x1b[0m: \x1b[32m"💩"\x1b[0m\n\x1b[1m}\x1b[0m\n'
     assert result == expected
+
+
+def test_print_json_with_default_ensure_ascii():
+    console = Console(file=io.StringIO(), color_system="truecolor")
+    console.print_json(data={"foo": "💩"})
+    result = console.file.getvalue()
+    print(repr(result))
+    expected = '\x1b[1m{\x1b[0m\n  \x1b[1;34m"foo"\x1b[0m: \x1b[32m"💩"\x1b[0m\n\x1b[1m}\x1b[0m\n'
+    assert result == expected
+
+
+def test_print_json_indent_none():
+    console = Console(file=io.StringIO(), color_system="truecolor")
+    data = {"name": "apple", "count": 1}
+    console.print_json(data=data, indent=None)
+    result = console.file.getvalue()
+    expected = '\x1b[1m{\x1b[0m\x1b[1;34m"name"\x1b[0m: \x1b[32m"apple"\x1b[0m, \x1b[1;34m"count"\x1b[0m: \x1b[1;36m1\x1b[0m\x1b[1m}\x1b[0m\n'
+    assert result == expected
+
+
+def test_console_null_file(monkeypatch):
+    # When stdout and stderr are null, Console.file should be replaced with NullFile
+    monkeypatch.setattr("sys.stdout", None)
+    monkeypatch.setattr("sys.stderr", None)
+
+    console = Console()
+    assert isinstance(console.file, NullFile)
 
 
 def test_log():
@@ -299,24 +384,12 @@ def test_capture():
 
 
 def test_input(monkeypatch, capsys):
-    def fake_input(prompt):
+    def fake_input(prompt=""):
         console.file.write(prompt)
         return "bar"
 
     monkeypatch.setattr("builtins.input", fake_input)
     console = Console()
-    user_input = console.input(prompt="foo:")
-    assert capsys.readouterr().out == "foo:"
-    assert user_input == "bar"
-
-
-def test_input_legacy_windows(monkeypatch, capsys):
-    def fake_input(prompt):
-        console.file.write(prompt)
-        return "bar"
-
-    monkeypatch.setattr("builtins.input", fake_input)
-    console = Console(legacy_windows=True)
     user_input = console.input(prompt="foo:")
     assert capsys.readouterr().out == "foo:"
     assert user_input == "bar"
@@ -441,7 +514,8 @@ def test_export_html():
     console = Console(record=True, width=100)
     console.print("[b]foo <script> 'test' [link=https://example.org]Click[/link]")
     html = console.export_html()
-    expected = '<!DOCTYPE html>\n<head>\n<meta charset="UTF-8">\n<style>\n.r1 {font-weight: bold}\n.r2 {color: #ff00ff; text-decoration-color: #ff00ff; font-weight: bold}\n.r3 {color: #008000; text-decoration-color: #008000; font-weight: bold}\nbody {\n    color: #000000;\n    background-color: #ffffff;\n}\n</style>\n</head>\n<html>\n<body>\n    <code>\n        <pre style="font-family:Menlo,\'DejaVu Sans Mono\',consolas,\'Courier New\',monospace"><span class="r1">foo &lt;</span><span class="r2">script</span><span class="r1">&gt; </span><span class="r3">&#x27;test&#x27;</span><span class="r1"> </span><a class="r1" href="https://example.org">Click</a>\n</pre>\n    </code>\n</body>\n</html>\n'
+    print(repr(html))
+    expected = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n.r1 {font-weight: bold}\n.r2 {color: #ff00ff; text-decoration-color: #ff00ff; font-weight: bold}\n.r3 {color: #008000; text-decoration-color: #008000; font-weight: bold}\nbody {\n    color: #000000;\n    background-color: #ffffff;\n}\n</style>\n</head>\n<body>\n    <pre style="font-family:Menlo,\'DejaVu Sans Mono\',consolas,\'Courier New\',monospace"><code style="font-family:inherit"><span class="r1">foo &lt;</span><span class="r2">script</span><span class="r1">&gt; </span><span class="r3">&#x27;test&#x27;</span><span class="r1"> </span><a class="r1" href="https://example.org">Click</a>\n</code></pre>\n</body>\n</html>\n'
     assert html == expected
 
 
@@ -449,8 +523,47 @@ def test_export_html_inline():
     console = Console(record=True, width=100)
     console.print("[b]foo [link=https://example.org]Click[/link]")
     html = console.export_html(inline_styles=True)
-    expected = '<!DOCTYPE html>\n<head>\n<meta charset="UTF-8">\n<style>\n\nbody {\n    color: #000000;\n    background-color: #ffffff;\n}\n</style>\n</head>\n<html>\n<body>\n    <code>\n        <pre style="font-family:Menlo,\'DejaVu Sans Mono\',consolas,\'Courier New\',monospace"><span style="font-weight: bold">foo </span><span style="font-weight: bold"><a href="https://example.org">Click</a></span>\n</pre>\n    </code>\n</body>\n</html>\n'
+    print(repr(html))
+    expected = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n\nbody {\n    color: #000000;\n    background-color: #ffffff;\n}\n</style>\n</head>\n<body>\n    <pre style="font-family:Menlo,\'DejaVu Sans Mono\',consolas,\'Courier New\',monospace"><code style="font-family:inherit"><span style="font-weight: bold">foo </span><span style="font-weight: bold"><a href="https://example.org">Click</a></span>\n</code></pre>\n</body>\n</html>\n'
     assert html == expected
+
+
+EXPECTED_SVG = '<svg class="rich-terminal" viewBox="0 0 1238 74.4" xmlns="http://www.w3.org/2000/svg">\n    <!-- Generated with Rich https://www.textualize.io -->\n    <style>\n\n    @font-face {\n        font-family: "Fira Code";\n        src: local("FiraCode-Regular"),\n                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),\n                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");\n        font-style: normal;\n        font-weight: 400;\n    }\n    @font-face {\n        font-family: "Fira Code";\n        src: local("FiraCode-Bold"),\n                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),\n                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");\n        font-style: bold;\n        font-weight: 700;\n    }\n\n    .terminal-3526644552-matrix {\n        font-family: Fira Code, monospace;\n        font-size: 20px;\n        line-height: 24.4px;\n        font-variant-east-asian: full-width;\n    }\n\n    .terminal-3526644552-title {\n        font-size: 18px;\n        font-weight: bold;\n        font-family: arial;\n    }\n\n    .terminal-3526644552-r1 { fill: #608ab1;font-weight: bold }\n.terminal-3526644552-r2 { fill: #c5c8c6 }\n    </style>\n\n    <defs>\n    <clipPath id="terminal-3526644552-clip-terminal">\n      <rect x="0" y="0" width="1219.0" height="23.4" />\n    </clipPath>\n    \n    </defs>\n\n    <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="72.4" rx="8"/><text class="terminal-3526644552-title" fill="#c5c8c6" text-anchor="middle" x="618" y="27">Rich</text>\n            <g transform="translate(26,22)">\n            <circle cx="0" cy="0" r="7" fill="#ff5f57"/>\n            <circle cx="22" cy="0" r="7" fill="#febc2e"/>\n            <circle cx="44" cy="0" r="7" fill="#28c840"/>\n            </g>\n        \n    <g transform="translate(9, 41)" clip-path="url(#terminal-3526644552-clip-terminal)">\n    <rect fill="#cc555a" x="0" y="1.5" width="36.6" height="24.65" shape-rendering="crispEdges"/>\n    <g class="terminal-3526644552-matrix">\n    <text class="terminal-3526644552-r1" x="0" y="20" textLength="36.6" clip-path="url(#terminal-3526644552-line-0)">foo</text><text class="terminal-3526644552-r2" x="48.8" y="20" textLength="61" clip-path="url(#terminal-3526644552-line-0)">Click</text><text class="terminal-3526644552-r2" x="1220" y="20" textLength="12.2" clip-path="url(#terminal-3526644552-line-0)">\n</text>\n    </g>\n    </g>\n</svg>\n'
+
+
+def test_export_svg():
+    console = Console(record=True, width=100)
+    console.print(
+        "[b red on blue reverse]foo[/] [blink][link=https://example.org]Click[/link]"
+    )
+    svg = console.export_svg()
+    print(repr(svg))
+
+    assert svg == EXPECTED_SVG
+
+
+def test_export_svg_specified_unique_id():
+    expected_svg = EXPECTED_SVG.replace("terminal-3526644552", "given-id")
+    console = Console(record=True, width=100)
+    console.print(
+        "[b red on blue reverse]foo[/] [blink][link=https://example.org]Click[/link]"
+    )
+    svg = console.export_svg(unique_id="given-id")
+    print(repr(svg))
+
+    assert svg == expected_svg
+
+
+def test_save_svg():
+    console = Console(record=True, width=100)
+    console.print(
+        "[b red on blue reverse]foo[/] [blink][link=https://example.org]Click[/link]"
+    )
+    with tempfile.TemporaryDirectory() as path:
+        export_path = os.path.join(path, "example.svg")
+        console.save_svg(export_path)
+        with open(export_path, "rt", encoding="utf-8") as svg_file:
+            assert svg_file.read() == EXPECTED_SVG
 
 
 def test_save_text():
@@ -464,14 +577,16 @@ def test_save_text():
 
 
 def test_save_html():
-    expected = "<!DOCTYPE html>\n<head>\n<meta charset=\"UTF-8\">\n<style>\n\nbody {\n    color: #000000;\n    background-color: #ffffff;\n}\n</style>\n</head>\n<html>\n<body>\n    <code>\n        <pre style=\"font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\">foo\n</pre>\n    </code>\n</body>\n</html>\n"
+    expected = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n\nbody {\n    color: #000000;\n    background-color: #ffffff;\n}\n</style>\n</head>\n<body>\n    <pre style="font-family:Menlo,\'DejaVu Sans Mono\',consolas,\'Courier New\',monospace"><code style="font-family:inherit">foo\n</code></pre>\n</body>\n</html>\n'
     console = Console(record=True, width=100)
     console.print("foo")
     with tempfile.TemporaryDirectory() as path:
         export_path = os.path.join(path, "example.html")
         console.save_html(export_path)
         with open(export_path, "rt") as html_file:
-            assert html_file.read() == expected
+            html = html_file.read()
+            print(repr(html))
+            assert html == expected
 
 
 def test_no_wrap():
@@ -685,8 +800,20 @@ def test_is_alt_screen():
     assert not console.is_alt_screen
 
 
+def test_set_console_title():
+    console = Console(force_terminal=True, _environ={})
+    if console.legacy_windows:
+        return
+
+    with console.capture() as captured:
+        console.set_window_title("hello")
+
+    result = captured.get()
+    assert result == "\x1b]0;hello\x07"
+
+
 def test_update_screen():
-    console = Console(force_terminal=True, width=20, height=5)
+    console = Console(force_terminal=True, width=20, height=5, _environ={})
     if console.legacy_windows:
         return
     with pytest.raises(errors.NoAltScreen):
@@ -759,3 +886,161 @@ def test_is_terminal_broken_file():
 def test_detect_color_system():
     console = Console(_environ={"TERM": "rxvt-unicode-256color"}, force_terminal=True)
     assert console._detect_color_system() == ColorSystem.EIGHT_BIT
+
+
+def test_reset_height():
+    """Test height is reset when rendering complex renderables."""
+
+    # https://github.com/Textualize/rich/issues/2042
+    class Panels:
+        def __rich_console__(self, console, options):
+            yield Panel("foo")
+            yield Panel("bar")
+
+    console = Console(
+        force_terminal=True,
+        color_system="truecolor",
+        width=20,
+        height=40,
+        legacy_windows=False,
+    )
+
+    with console.capture() as capture:
+        console.print(Panel(Panels()), height=12)
+    result = capture.get()
+    print(repr(result))
+    expected = "╭──────────────────╮\n│ ╭──────────────╮ │\n│ │ foo          │ │\n│ ╰──────────────╯ │\n│ ╭──────────────╮ │\n│ │ bar          │ │\n│ ╰──────────────╯ │\n│                  │\n│                  │\n│                  │\n│                  │\n╰──────────────────╯\n"
+
+    assert result == expected
+
+
+def test_render_lines_height_minus_vertical_pad_is_negative():
+    # https://github.com/Textualize/textual/issues/389
+    console = Console(
+        force_terminal=True,
+        color_system="truecolor",
+        width=20,
+        height=40,
+        legacy_windows=False,
+    )
+    options = console.options.update_height(1)
+
+    # Ensuring that no exception is raised...
+    console.render_lines(Padding("hello", pad=(1, 0)), options=options)
+
+
+def test_recording_no_stdout_and_no_stderr_files(monkeypatch):
+    # Rich should work even if there's no file available to write to.
+    # For example, pythonw nullifies output streams.
+    # Built-in print silently no-ops in pythonw.
+    # Related: https://github.com/Textualize/rich/issues/2400
+    monkeypatch.setattr("sys.stdout", None)
+    monkeypatch.setattr("sys.stderr", None)
+    console = Console(record=True)
+    console.print("hello world")
+    text = console.export_text()
+    assert text == "hello world\n"
+
+
+def test_capturing_no_stdout_and_no_stderr_files(monkeypatch):
+    monkeypatch.setattr("sys.stdout", None)
+    monkeypatch.setattr("sys.stderr", None)
+    console = Console()
+    with console.capture() as capture:
+        console.print("hello world")
+    assert capture.get() == "hello world\n"
+
+
+@pytest.mark.parametrize("env_value", ["", "something", "0"])
+def test_force_color(env_value):
+    # Even though we use a non-tty file, the presence of FORCE_COLOR env var
+    # means is_terminal returns True.
+    console = Console(file=io.StringIO(), _environ={"FORCE_COLOR": env_value})
+    assert console.is_terminal
+
+
+def test_force_color_jupyter():
+    # FORCE_COLOR above doesn't happen in a Jupyter kernel
+    console = Console(
+        file=io.StringIO(), _environ={"FORCE_COLOR": "1"}, force_jupyter=True
+    )
+    assert not console.is_terminal
+
+
+def test_force_color():
+    console = Console(
+        file=io.StringIO(),
+        _environ={
+            "FORCE_COLOR": "1",
+            "TERM": "xterm-256color",
+            "COLORTERM": "truecolor",
+        },
+    )
+    assert console.color_system in ("truecolor", "windows")
+
+
+def test_reenable_highlighting() -> None:
+    """Check that when highlighting is disabled, it can be reenabled in print()"""
+    console = Console(
+        file=io.StringIO(),
+        _environ={
+            "FORCE_COLOR": "1",
+            "TERM": "xterm-256color",
+            "COLORTERM": "truecolor",
+        },
+        highlight=False,
+    )
+    console.print("[1, 2, 3]")
+    console.print("[1, 2, 3]", highlight=True)
+    output = console.file.getvalue()
+    lines = output.splitlines()
+    print(repr(lines))
+    # First line not highlighted
+    assert lines[0] == "[1, 2, 3]"
+    # Second line highlighted
+
+    assert (
+        lines[1]
+        == "\x1b[1m[\x1b[0m\x1b[1;36m1\x1b[0m, \x1b[1;36m2\x1b[0m, \x1b[1;36m3\x1b[0m\x1b[1m]\x1b[0m"
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+def test_brokenpipeerror() -> None:
+    """Test BrokenPipe works as expected."""
+    which_py, which_head = (["which", cmd] for cmd in ("python", "head"))
+    rich_cmd = "python -m rich".split()
+    for cmd in [which_py, which_head, rich_cmd]:
+        check = subprocess.run(cmd).returncode
+        if check != 0:
+            return  # Only test on suitable Unix platforms
+    head_cmd = "head -1".split()
+    proc1 = subprocess.Popen(rich_cmd, stdout=subprocess.PIPE)
+    proc2 = subprocess.Popen(head_cmd, stdin=proc1.stdout, stdout=subprocess.PIPE)
+    proc1.stdout.close()
+    output, _ = proc2.communicate()
+    proc1.wait()
+    proc2.wait()
+    assert proc1.returncode == 1
+    assert proc2.returncode == 0
+
+
+def test_capture_and_record() -> None:
+    """Regression test for https://github.com/Textualize/rich/issues/2563"""
+
+    console = Console(record=True)
+    print("Before Capture started:")
+    console.print("[blue underline]Print 0")
+    with console.capture() as capture:
+        console.print("[blue underline]Print 1")
+        console.print("[blue underline]Print 2")
+        console.print("[blue underline]Print 3")
+        console.print("[blue underline]Print 4")
+
+    capture_content = capture.get()
+    print(repr(capture_content))
+    assert capture_content == "Print 1\nPrint 2\nPrint 3\nPrint 4\n"
+
+    recorded_content = console.export_text()
+    print(repr(recorded_content))
+    assert recorded_content == "Print 0\n"

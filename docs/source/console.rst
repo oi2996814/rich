@@ -1,7 +1,7 @@
 Console API
 ===========
 
-For complete control over terminal formatting, Rich offers a :class:`~rich.console.Console` class. Most applications will require a single Console instance, so you may want to create one at the module level or as an attribute of your top-level object. For example, you  could add a file called "console.py" to your project::
+For complete control over terminal formatting, Rich offers a :class:`~rich.console.Console` class. Most applications will require a single Console instance, so you may want to create one at the module level or as an attribute of your top-level object. For example, you could add a file called "console.py" to your project::
 
     from rich.console import Console
     console = Console()
@@ -52,13 +52,13 @@ To write rich content to the terminal use the :meth:`~rich.console.Console.print
     console.print(locals())
     console.print("FOO", style="white on blue")
 
-You can also use :meth:`~rich.console.Console.print` to render objects that support the :ref:`protocol`, which includes Rich's built in objects such as :class:`~rich.text.Text`, :class:`~rich.table.Table`, and :class:`~rich.syntax.Syntax` -- or other custom objects.
+You can also use :meth:`~rich.console.Console.print` to render objects that support the :ref:`protocol`, which includes Rich's built-in objects such as :class:`~rich.text.Text`, :class:`~rich.table.Table`, and :class:`~rich.syntax.Syntax` -- or other custom objects.
 
 
 Logging
 -------
 
-The :meth:`~rich.console.Console.log` methods offers the same capabilities as print, but adds some features useful for debugging a running application. Logging writes the current time in a column to the left, and the file and line where the method was called to a column on the right. Here's an example::
+The :meth:`~rich.console.Console.log` method offers the same capabilities as print, but adds some features useful for debugging a running application. Logging writes the current time in a column to the left, and the file and line where the method was called to a column on the right. Here's an example::
 
     >>> console.log("Hello, World!")
 
@@ -94,7 +94,7 @@ You can also pretty print JSON via the command line with the following::
 Low level output
 ----------------
 
-In additional to :meth:`~rich.console.Console.print` and :meth:`~rich.console.Console.log`, Rich has a :meth:`~rich.console.Console.out` method which provides a lower-level way of writing to the terminal. The out() method converts all the positional arguments to strings and won't pretty print, word wrap, or apply markup to the output, but can apply a basic style and will optionally do highlighting.
+In additional to :meth:`~rich.console.Console.print` and :meth:`~rich.console.Console.log`, Rich has an :meth:`~rich.console.Console.out` method which provides a lower-level way of writing to the terminal. The out() method converts all the positional arguments to strings and won't pretty print, word wrap, or apply markup to the output, but can apply a basic style and will optionally do highlighting.
 
 Here's an example::
 
@@ -104,7 +104,7 @@ Here's an example::
 Rules
 -----
 
-The :meth:`~rich.console.Console.rule` method will draw a horizontal line with an optional title, which is a good way of dividing your terminal output in to sections.
+The :meth:`~rich.console.Console.rule` method will draw a horizontal line with an optional title, which is a good way of dividing your terminal output into sections.
 
     >>> console.rule("[bold red]Chapter 2")
 
@@ -122,7 +122,7 @@ Rich can display a status message with a 'spinner' animation that won't interfer
 
     python -m rich.status
 
-To display a status message, call :meth:`~rich.console.Console.status` with the status message (which may be a string, Text, or other renderable). The result is a context manager which starts and stop the status display around a block of code. Here's an example::
+To display a status message, call :meth:`~rich.console.Console.status` with the status message (which may be a string, Text, or other renderable). The result is a context manager which starts and stops the status display around a block of code. Here's an example::
 
     with console.status("Working..."):
         do_work()
@@ -140,7 +140,7 @@ Run the following command to see the available choices for ``spinner``::
 Justify / Alignment
 -------------------
 
-Both print and log support a ``justify`` argument which if set must be one of "default", "left", "right", "center", or "full".  If "left", any text printed (or logged) will be left aligned, if "right" text will be aligned to the right of the terminal, if "center" the text will be centered, and if "full" the text will be lined up with both the left and right edges of the terminal (like printed text in a book). 
+Both print and log support a ``justify`` argument which if set must be one of "default", "left", "right", "center", or "full".  If "left", any text printed (or logged) will be left aligned, if "right" text will be aligned to the right of the terminal, if "center" the text will be centered, and if "full" the text will be lined up with both the left and right edges of the terminal (like printed text in a book).
 
 The default for ``justify`` is ``"default"`` which will generally look the same as ``"left"`` but with a subtle difference. Left justify will pad the right of the text with spaces, while a default justify will not. You will only notice the difference if you set a background color with the ``style`` argument. The following example demonstrates the difference::
 
@@ -161,7 +161,7 @@ This produces the following output:
 
     <pre style="font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #c0c0c0; background-color: #000080; font-weight: bold">Rich
     Rich               &nbsp;
-            Rich       &nbsp; 
+            Rich       &nbsp;
                     Rich
     </span></pre>
 
@@ -170,7 +170,7 @@ Overflow
 
 Overflow is what happens when text you print is larger than the available space. Overflow may occur if you print long 'words' such as URLs for instance, or if you have text inside a panel or table cell with restricted space.
 
-You can specify how Rich should handle overflow with the ``overflow`` argument to  :meth:`~rich.console.Console.print` which should be one of the following strings: "fold", "crop", "ellipsis", or "ignore". The default is "fold" which will put any excess characters on the following line, creating as many new lines as required to fit the text.
+You can specify how Rich should handle overflow with the ``overflow`` argument to :meth:`~rich.console.Console.print` which should be one of the following strings: "fold", "crop", "ellipsis", or "ignore". The default is "fold" which will put any excess characters on the following line, creating as many new lines as required to fit the text.
 
 The "crop" method truncates the text at the end of the line, discarding any characters that would overflow.
 
@@ -223,7 +223,7 @@ The Console has a ``style`` attribute which you can use to apply a style to ever
 Soft Wrapping
 -------------
 
-Rich word wraps text you print by inserting line breaks. You can disable this behavior by setting ``soft_wrap=True`` when calling :meth:`~rich.console.Console.print`. With *soft wrapping* enabled any text that doesn't fit will run on to the following line(s), just like the builtin ``print``.
+Rich word wraps text you print by inserting line breaks. You can disable this behavior by setting ``soft_wrap=True`` when calling :meth:`~rich.console.Console.print`. With *soft wrapping* enabled any text that doesn't fit will run on to the following line(s), just like the built-in ``print``.
 
 
 Cropping
@@ -238,7 +238,7 @@ The :meth:`~rich.console.Console.print` method has a boolean ``crop`` argument. 
 Input
 -----
 
-The console class has an :meth:`~rich.console.Console.input` method which works in the same way as Python's builtin :func:`input` function, but can use anything that Rich can print as a prompt. For example, here's a colorful prompt with an emoji::
+The console class has an :meth:`~rich.console.Console.input` method which works in the same way as Python's built-in :func:`input` function, but can use anything that Rich can print as a prompt. For example, here's a colorful prompt with an emoji::
 
     from rich.console import Console
     console = Console()
@@ -249,21 +249,46 @@ If Python's builtin :mod:`readline` module is previously loaded, elaborate line 
 Exporting
 ---------
 
-The Console class can export anything written to it as either text or html. To enable exporting, first set ``record=True`` on the constructor. This tells Rich to save a copy of any data you ``print()`` or ``log()``. Here's an example::
+The Console class can export anything written to it as either text, svg, or html. To enable exporting, first set ``record=True`` on the constructor. This tells Rich to save a copy of any data you ``print()`` or ``log()``. Here's an example::
 
     from rich.console import Console
     console = Console(record=True)
 
-After you have written content, you can call :meth:`~rich.console.Console.export_text` or :meth:`~rich.console.Console.export_html` to get the console output as a string. You can also call :meth:`~rich.console.Console.save_text` or :meth:`~rich.console.Console.save_html` to write the contents directly to disk.
+After you have written content, you can call :meth:`~rich.console.Console.export_text`, :meth:`~rich.console.Console.export_svg` or :meth:`~rich.console.Console.export_html` to get the console output as a string. You can also call :meth:`~rich.console.Console.save_text`, :meth:`~rich.console.Console.save_svg`, or :meth:`~rich.console.Console.save_html` to write the contents directly to disk.
 
 For examples of the html output generated by Rich Console, see :ref:`appendix-colors`.
+
+Exporting SVGs
+^^^^^^^^^^^^^^
+
+When using :meth:`~rich.console.Console.export_svg` or :meth:`~rich.console.Console.save_svg`, the width of the SVG will match the width of your terminal window (in terms of characters), while the height will scale automatically to accommodate the console output.
+
+You can open the SVG in a web browser. You can also insert it in to a webpage with an ``<img>`` tag or by copying the markup in to your HTML.
+
+The image below shows an example of an SVG exported by Rich.
+
+.. image:: ../images/svg_export.svg
+
+You can customize the theme used during SVG export by importing the desired theme from the :mod:`rich.terminal_theme` module and passing it to :meth:`~rich.console.Console.export_svg` or :meth:`~rich.console.Console.save_svg` via the ``theme`` parameter::
+
+
+    from rich.console import Console
+    from rich.terminal_theme import MONOKAI
+
+    console = Console(record=True)
+    console.save_svg("example.svg", theme=MONOKAI)
+
+Alternatively, you can create a theme of your own by constructing a :class:`rich.terminal_theme.TerminalTheme` instance yourself and passing that in.
+
+.. note::
+    The SVGs reference the Fira Code font. If you embed a Rich SVG in your page, you may also want to add a link to the `Fira Code CSS <https://cdnjs.com/libraries/firacode>`_
 
 Error console
 -------------
 
 The Console object will write to ``sys.stdout`` by default (so that you see output in the terminal). If you construct the Console with ``stderr=True`` Rich will write to ``sys.stderr``. You may want to use this to create an *error console* so you can split error messages from regular output. Here's an example::
 
-    from rich.console import Console    
+    from rich.console import Console
     error_console = Console(stderr=True)
 
 You might also want to set the ``style`` parameter on the Console to make error messages visually distinct. Here's how you might do that::
@@ -273,7 +298,7 @@ You might also want to set the ``style`` parameter on the Console to make error 
 File output
 -----------
 
-You can also tell the Console object to write to a file by setting the ``file`` argument on the constructor -- which should be a file-like object opened for writing text. You could use this to write to a file without the output ever appearing on the terminal. Here's an example::
+You can tell the Console object to write to a file by setting the ``file`` argument on the constructor -- which should be a file-like object opened for writing text. You could use this to write to a file without the output ever appearing on the terminal. Here's an example::
 
     import sys
     from rich.console import Console
@@ -282,8 +307,8 @@ You can also tell the Console object to write to a file by setting the ``file`` 
     with open("report.txt", "wt") as report_file:
         console = Console(file=report_file)
         console.rule(f"Report Generated {datetime.now().ctime()}")
-        
-Note that when writing to a file you may want to explicitly the ``width`` argument if you don't want to wrap the output to the current console width.
+
+Note that when writing to a file you may want to explicitly set the ``width`` argument if you don't want to wrap the output to the current console width.
 
 Capturing output
 ----------------
@@ -321,7 +346,7 @@ You can page output from a Console by calling :meth:`~rich.console.Console.pager
 Since the default pager on most platforms don't support color, Rich will strip color from the output. If you know that your pager supports color, you can set ``styles=True`` when calling the :meth:`~rich.console.Console.pager` method.
 
 .. note::
-    Rich will use the ``PAGER`` environment variable to get the pager command. On Linux and macOS you can set this to ``less -r`` to enable paging with ANSI styles.
+    Rich will look at ``MANPAGER`` then the ``PAGER`` environment variables (``MANPAGER`` takes priority) to get the pager command. On Linux and macOS you can set one of these to ``less -r`` to enable paging with ANSI styles.
 
 Alternate screen
 ----------------
@@ -340,10 +365,10 @@ Here's an example of an alternate screen::
     with console.screen():
         console.print(locals())
         sleep(5)
-        
+
 The above code will display a pretty printed dictionary on the alternate screen before returning to the command prompt after 5 seconds.
 
-You can also provide a renderable to :meth:`~rich.console.Console.screen` which will be displayed in the alternate screen when you call :meth:`~rich.ScreenContext.update`. 
+You can also provide a renderable to :meth:`~rich.console.Console.screen` which will be displayed in the alternate screen when you call :meth:`~rich.ScreenContext.update`.
 
 Here's an example::
 
@@ -381,7 +406,7 @@ If Rich detects that it is not writing to a terminal it will strip control codes
 Letting Rich auto-detect terminals is useful as it will write plain text when you pipe output to a file or other application.
 
 Interactive mode
-~~~~~~~~~~~~~~~~
+----------------
 
 Rich will remove animations such as progress bars and status indicators when not writing to a terminal as you probably don't want to write these out to a text file (for example). You can override this behavior by setting the ``force_interactive`` argument on the constructor. Set it to True to enable animations or False to disable them.
 
@@ -395,4 +420,11 @@ Rich respects some standard environment variables.
 
 Setting the environment variable ``TERM`` to ``"dumb"`` or ``"unknown"`` will disable color/style and some features that require moving the cursor, such as progress bars.
 
-If the environment variable ``NO_COLOR`` is set, Rich will disable all color in the output.
+If the environment variable ``FORCE_COLOR`` is set, then color/styles will be enabled regardless of the value of ``TERM``. This is useful on CI systems which aren't terminals but can none-the-less display ANSI escape sequences.
+
+If the environment variable ``NO_COLOR`` is set, Rich will disable all color in the output. This takes precedence over ``FORCE_COLOR``. See `no_color <https://no-color.org/>`_ for details.
+
+.. note::
+    The ``NO_COLOR`` environment variable removes *color* only. Styles such as dim, bold, italic, underline etc. are preserved.
+
+If ``width`` / ``height`` arguments are not explicitly provided as arguments to ``Console`` then the environment variables ``COLUMNS``/``LINES`` can be used to set the console width/height. ``JUPYTER_COLUMNS``/``JUPYTER_LINES`` behave similarly and are used in Jupyter.

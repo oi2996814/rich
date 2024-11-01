@@ -1,29 +1,29 @@
 import io
+import re
 import sys
+from typing import List
 
 import pytest
 
 from rich.console import Console
-from rich.traceback import install, Traceback
-
-# from .render import render
-
-try:
-    from ._exception_render import expected
-except ImportError:
-    expected = None
-
-
-CAPTURED_EXCEPTION = 'Traceback (most recent call last):\n╭──────────────────────────────────────────────────────────────────────────────────────────────────╮\n│ File "/Users/willmcgugan/projects/rich/tests/test_traceback.py", line 26, in test_handler        │\n│    23     try:                                                                                   │\n│    24         old_handler = install(console=console, line_numbers=False)                         │\n│    25         try:                                                                               │\n│  ❱ 26             1 / 0                                                                          │\n│    27         except Exception:                                                                  │\n│    28             exc_type, exc_value, traceback = sys.exc_info()                                │\n│    29             sys.excepthook(exc_type, exc_value, traceback)                                 │\n╰──────────────────────────────────────────────────────────────────────────────────────────────────╯\nZeroDivisionError: division by zero\n'
+from rich.theme import Theme
+from rich.traceback import Traceback, install
 
 
 def test_handler():
     console = Console(file=io.StringIO(), width=100, color_system=None)
     expected_old_handler = sys.excepthook
+
+    def level1():
+        level2()
+
+    def level2():
+        return 1 / 0
+
     try:
         old_handler = install(console=console)
         try:
-            1 / 0
+            level1()
         except Exception:
             exc_type, exc_value, traceback = sys.exc_info()
             sys.excepthook(exc_type, exc_value, traceback)
@@ -31,14 +31,33 @@ def test_handler():
             print(repr(rendered_exception))
             assert "Traceback" in rendered_exception
             assert "ZeroDivisionError" in rendered_exception
+
+            frame_blank_line_possible_preambles = (
+                # Start of the stack rendering:
+                "╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮",
+                # Each subsequent frame (starting with the file name) should then be preceded with a blank line:
+                "│" + (" " * 98) + "│",
+            )
+            for frame_start in re.finditer(
+                "^│ .+rich/tests/test_traceback.py:",
+                rendered_exception,
+                flags=re.MULTILINE,
+            ):
+                frame_start_index = frame_start.start()
+                for preamble in frame_blank_line_possible_preambles:
+                    preamble_start, preamble_end = (
+                        frame_start_index - len(preamble) - 1,
+                        frame_start_index - 1,
+                    )
+                    if rendered_exception[preamble_start:preamble_end] == preamble:
+                        break
+                else:
+                    pytest.fail(
+                        f"Frame {frame_start[0]} doesn't have the expected preamble"
+                    )
     finally:
         sys.excepthook = old_handler
         assert old_handler == expected_old_handler
-
-
-def text_exception_render():
-    exc_render = render(get_exception())
-    assert exc_render == expected
 
 
 def test_capture():
@@ -109,8 +128,8 @@ def test_syntax_error():
     console = Console(width=100, file=io.StringIO())
     try:
         # raises SyntaxError: unexpected EOF while parsing
-        eval("(2 + 2")
-    except Exception:
+        eval("(2+2")
+    except SyntaxError:
         console.print_exception()
     exception_text = console.file.getvalue()
     assert "SyntaxError" in exception_text
@@ -190,6 +209,30 @@ def test_filename_not_a_file():
     assert "string" in exception_text
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="renders different on windows")
+def test_traceback_console_theme_applies():
+    """
+    Ensure that themes supplied via Console init work on Tracebacks.
+    Regression test for https://github.com/Textualize/rich/issues/1786
+    """
+    r, g, b = 123, 234, 123
+    console = Console(
+        force_terminal=True,
+        _environ={"COLORTERM": "truecolor"},
+        theme=Theme({"traceback.title": f"rgb({r},{g},{b})"}),
+    )
+
+    console.begin_capture()
+    try:
+        1 / 0
+    except Exception:
+        console.print_exception()
+
+    result = console.end_capture()
+
+    assert f"\\x1b[38;2;{r};{g};{b}mTraceback \\x1b[0m" in repr(result)
+
+
 def test_broken_str():
     class BrokenStr(Exception):
         def __str__(self):
@@ -210,6 +253,16 @@ def test_guess_lexer():
     code_python = "#! usr/bin/env python\nimport this"
     assert Traceback._guess_lexer("foo", code_python) == "python"
     assert Traceback._guess_lexer("foo", "foo\nbnar") == "text"
+
+
+def test_guess_lexer_yaml_j2():
+    # https://github.com/Textualize/rich/issues/2018
+    code = """\
+foobar:
+    something: {{ raiser() }}
+    else: {{ 5 + 5 }}
+    """
+    assert Traceback._guess_lexer("test.yaml.j2", code) in ("text", "YAML+Jinja")
 
 
 def test_recursive():
@@ -240,11 +293,68 @@ def test_suppress():
         assert "foo" in traceback.suppress[1]
 
 
-if __name__ == "__main__":  # pragma: no cover
+@pytest.mark.parametrize(
+    "rich_traceback_omit_for_level2,expected_frames_length,expected_frame_names",
+    (
+        # fmt: off
+        [True, 3, ["test_rich_traceback_omit_optional_local_flag", "level1", "level3"]],
+        [False, 4, ["test_rich_traceback_omit_optional_local_flag", "level1", "level2", "level3"]],
+        # fmt: on
+    ),
+)
+def test_rich_traceback_omit_optional_local_flag(
+    rich_traceback_omit_for_level2: bool,
+    expected_frames_length: int,
+    expected_frame_names: List[str],
+):
+    def level1():
+        return level2()
 
-    expected = render(get_exception())
+    def level2():
+        # true-ish values are enough to trigger the opt-out:
+        _rich_traceback_omit = 1 if rich_traceback_omit_for_level2 else 0
+        return level3()
 
-    with open("_exception_render.py", "wt") as fh:
-        exc_render = render(get_exception())
-        print(exc_render)
-        fh.write(f"expected={exc_render!r}")
+    def level3():
+        return 1 / 0
+
+    try:
+        level1()
+    except Exception:
+        exc_type, exc_value, traceback = sys.exc_info()
+        trace = Traceback.from_exception(exc_type, exc_value, traceback).trace
+        frames = trace.stacks[0].frames
+        assert len(frames) == expected_frames_length
+        frame_names = [f.name for f in frames]
+        assert frame_names == expected_frame_names
+
+
+@pytest.mark.skipif(
+    sys.version_info.minor >= 11, reason="Not applicable after Python 3.11"
+)
+def test_traceback_finely_grained_missing() -> None:
+    """Before 3.11, the last_instruction should be None"""
+    try:
+        1 / 0
+    except:
+        traceback = Traceback()
+        last_instruction = traceback.trace.stacks[-1].frames[-1].last_instruction
+        assert last_instruction is None
+
+
+@pytest.mark.skipif(
+    sys.version_info.minor < 11, reason="Not applicable before Python 3.11"
+)
+def test_traceback_finely_grained() -> None:
+    """Check that last instruction is populated."""
+    try:
+        1 / 0
+    except:
+        traceback = Traceback()
+        last_instruction = traceback.trace.stacks[-1].frames[-1].last_instruction
+        assert last_instruction is not None
+        assert isinstance(last_instruction, tuple)
+        assert len(last_instruction) == 2
+        start, end = last_instruction
+        print(start, end)
+        assert start[0] == end[0]
